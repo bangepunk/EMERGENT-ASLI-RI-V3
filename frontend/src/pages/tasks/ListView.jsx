@@ -78,6 +78,7 @@ export default function ListView({ tasks, projects, onOpen, selected, setSelecte
   return (
     <div data-testid="task-list-view">
       <div className="mb-3 flex justify-end gap-2"><ColumnMenu cols={cols} cfg={cfg} save={(c) => savePrefs({ task_columns: c })} /></div>
+      {!tasks.length && <p className="rounded-2xl border border-dashed p-8 text-center text-sm text-sub" data-testid="task-list-empty">No tasks match these filters.</p>}
       <div className="space-y-5">
         {groups.map(([key, name, color, items]) => {
           const lim = limit[key] || 50;

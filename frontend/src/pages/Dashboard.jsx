@@ -56,9 +56,9 @@ function Reminders({ kind, items, reload }) {
         ))}
         {!list.length && <li className="px-2 text-sm text-sub">Nothing here yet.</li>}
       </ul>
-      <form onSubmit={add} className="mt-3 flex gap-2">
-        <input value={text} onChange={(e) => setText(e.target.value)} required placeholder={kind === "meeting" ? "Add meeting…" : "Add reminder…"} className="h-10 min-w-0 flex-1 rounded-xl border bg-surface2 px-3 text-sm outline-none" data-testid={`${kind}-input`} />
-        <input type="datetime-local" value={at} onChange={(e) => setAt(e.target.value)} className="h-10 w-[42px] sm:w-auto rounded-xl border bg-surface2 px-2 text-xs" aria-label="Date and time" />
+      <form onSubmit={add} className="mt-3 flex flex-wrap gap-2">
+        <input value={text} onChange={(e) => setText(e.target.value)} required placeholder={kind === "meeting" ? "Add meeting…" : "Add reminder…"} className="h-10 min-w-[140px] flex-1 rounded-xl border bg-surface2 px-3 text-sm outline-none" data-testid={`${kind}-input`} />
+        <input type="datetime-local" value={at} onChange={(e) => setAt(e.target.value)} className="order-last h-10 w-full rounded-xl border bg-surface2 px-2 text-xs" aria-label="Date and time" />
         <button className="btn-accent h-10 w-10 flex items-center justify-center" aria-label="Add" data-testid={`${kind}-add-btn`}><Plus size={16} /></button>
       </form>
     </div>
@@ -79,7 +79,8 @@ export default function Dashboard() {
   };
   useEffect(() => { load().catch(() => {}); }, []); // eslint-disable-line
   const dash = prefs.dashboard || {};
-  const order = [...(dash.order || DEFAULT_ORDER).filter((k) => WIDGETS[k]), ...DEFAULT_ORDER.filter((k) => !(dash.order || []).includes(k))];
+  const baseOrder = dash.order || DEFAULT_ORDER;
+  const order = [...new Set([...baseOrder.filter((k) => WIDGETS[k]), ...DEFAULT_ORDER.filter((k) => !baseOrder.includes(k))])];
   const hidden = dash.hidden || [];
   const move = (k, dir) => { const o = [...order]; const i = o.indexOf(k); const j = i + dir; if (j < 0 || j >= o.length) return; [o[i], o[j]] = [o[j], o[i]]; savePrefs({ dashboard: { ...dash, order: o } }); };
   const toggle = (k) => savePrefs({ dashboard: { ...dash, hidden: hidden.includes(k) ? hidden.filter((x) => x !== k) : [...hidden, k] } });

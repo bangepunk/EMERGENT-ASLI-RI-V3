@@ -165,7 +165,7 @@ async def stats(u=Depends(get_user)):
     return {"total_employees": await db.users.count_documents({"workspace_id": w}),
             "active_employees": await db.users.count_documents({"workspace_id": w, "status": "active"}),
             "pending_employees": await db.users.count_documents({"workspace_id": w, "status": "pending"}),
-            "online_now": len([x for x in manager.conns]),
+            "online_now": len([x async for x in db.users.find({"workspace_id": w}, {"user_id": 1}) if x["user_id"] in manager.conns]),
             "departments": await db.org_units.count_documents({"workspace_id": w, "level": "Department"}),
             "groups": await db.conversations.count_documents({"workspace_id": w, "type": "group", "deleted": {"$ne": True}}),
             "active_projects": await db.projects.count_documents({"workspace_id": w, "status": "active"}),
@@ -184,14 +184,14 @@ async def search(q: str = Query(..., min_length=1), u=Depends(get_user)):
     import re
     rx = {"$regex": re.escape(q), "$options": "i"}
     w = u["workspace_id"]
-    convs = await db.conversations.find({"workspace_id": w, "deleted": {"$ne": True}, "$or": [{"member_ids": u["user_id"]}, {"type": "group", "group_type": {"$ne": "private"}}]}, {"_id": 0, "id": 1, "name": 1, "type": 1, "member_ids": 1, "group_type": 1, "description": 1}).to_list(1000)
+    convs = await db.conversations.find({"workspace_id": w, "deleted": {"$ne": True}, "$or": [{"member_ids": u["user_id"]}, {"type": "group", "group_type": {"$ne": "private"}}]}, {"_id": 0, "id": 1, "name": 1, "type": 1, "member_ids": 1, "group_type": 1, "description": 1, "archived": 1}).to_list(1000)
     member_ids = [c["id"] for c in convs if u["user_id"] in c["member_ids"]]
-    groups = [c for c in convs if c["type"] == "group" and (re.search(re.escape(q), c.get("name", ""), re.I) or re.search(re.escape(q), c.get("description", ""), re.I))][:8]
+    groups = [c for c in convs if c["type"] == "group" and not c.get("archived") and (re.search(re.escape(q), c.get("name", ""), re.I) or re.search(re.escape(q), c.get("description", ""), re.I))][:8]
     for g in groups:
         g.pop("member_ids", None)
     return {"employees": await db.users.find({"workspace_id": w, "status": "active", "$or": [{"name": rx}, {"job_title": rx}, {"department": rx}]}, {"_id": 0, "user_id": 1, "name": 1, "job_title": 1, "picture": 1}).limit(8).to_list(8),
             "messages": await db.messages.find({"conversation_id": {"$in": member_ids}, "text": rx, "deleted": {"$ne": True}}, {"_id": 0, "id": 1, "text": 1, "conversation_id": 1, "sender_id": 1, "created_at": 1}).sort("created_at", -1).limit(10).to_list(10),
             "groups": groups,
             "projects": await db.projects.find({"workspace_id": w, "name": rx}, {"_id": 0, "id": 1, "name": 1, "status": 1}).limit(6).to_list(6),
-            "tasks": await db.tasks.find({"workspace_id": w, "$or": [{"title": rx}, {"number_str": rx}]}, {"_id": 0, "id": 1, "title": 1, "number_str": 1, "status": 1}).limit(10).to_list(10),
+            "tasks": await db.tasks.find({"workspace_id": w, "archived": {"$ne": True}, "$or": [{"title": rx}, {"number_str": rx}]}, {"_id": 0, "id": 1, "title": 1, "number_str": 1, "status": 1}).limit(10).to_list(10),
             "polls": await db.polls.find({"conversation_id": {"$in": member_ids}, "question": rx}, {"_id": 0, "id": 1, "question": 1, "conversation_id": 1}).limit(6).to_list(6)}

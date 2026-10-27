@@ -18,7 +18,8 @@ function Comments({ t, reload }) {
   const { userMap, users } = useApp();
   const [text, setText] = useState("");
   const send = async () => {
-    const ids = users.filter((u) => text.includes(`@${u.name.split(" ")[0]}`)).map((u) => u.user_id);
+    const full = users.filter((u) => text.includes(`@${u.name}`));
+    const ids = (full.length ? full : users.filter((u) => new RegExp(`@${u.name.split(" ")[0]}(?![\\w])`).test(text) && users.filter((x) => x.name.split(" ")[0] === u.name.split(" ")[0]).length === 1)).map((u) => u.user_id);
     try { await api.post(`/tasks/${t.id}/comments`, { text, mention_ids: ids }); setText(""); reload(); } catch (e) { toast.error(errMsg(e)); }
   };
   return (

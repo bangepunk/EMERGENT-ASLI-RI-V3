@@ -169,7 +169,8 @@ async def messages(cid: str, before: str = Query(None), q: str = Query(None), li
     if before:
         query["created_at"] = {"$lt": before}
     if q:
-        query["text"] = {"$regex": q, "$options": "i"}
+        import re
+        query["text"] = {"$regex": re.escape(q), "$options": "i"}
         query["deleted"] = {"$ne": True}
     ms = await db.messages.find(query, P).sort("created_at", -1).limit(min(limit, 100)).to_list(100)
     return list(reversed(ms))

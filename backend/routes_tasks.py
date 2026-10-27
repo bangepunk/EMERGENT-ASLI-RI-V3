@@ -77,7 +77,8 @@ def build_query(u, p, statuses):
     if p.get("ids"):
         q["id"] = {"$in": p["ids"].split(",")}
     if p.get("q"):
-        rx = {"$regex": p["q"], "$options": "i"}
+        import re
+        rx = {"$regex": re.escape(p["q"]), "$options": "i"}
         q.setdefault("$and", []).append({"$or": [{"title": rx}, {"description": rx}, {"number_str": rx}]})
     return q
 
@@ -86,7 +87,7 @@ def build_query(u, p, statuses):
 async def list_tasks(request: Request, u=Depends(get_user)):
     statuses = await ws_statuses(u["workspace_id"])
     q = build_query(u, dict(request.query_params), statuses)
-    return await db.tasks.find(q, {"_id": 0, "description": 0}).sort("updated_at", -1).to_list(3000)
+    return await db.tasks.find(q, {"_id": 0}).sort("updated_at", -1).to_list(3000)
 
 
 @router.post("/tasks")
@@ -126,7 +127,8 @@ async def log(t, u, action, changes=None):
 
 
 async def broadcast(u):
-    await manager.send(list(manager.conns.keys()), {"type": "tasks:changed", "data": {"workspace_id": u["workspace_id"]}})
+    ids = [x["user_id"] async for x in db.users.find({"workspace_id": u["workspace_id"]}, {"user_id": 1})]
+    await manager.send([i for i in ids if i in manager.conns], {"type": "tasks:changed", "data": {"workspace_id": u["workspace_id"]}})
 
 
 async def load_task(tid, u):

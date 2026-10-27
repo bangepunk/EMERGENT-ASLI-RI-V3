@@ -1,0 +1,56 @@
+{
+  "summary": "First full E2E pass of CIRCLE (backend pytest 27/27 + Playwright UI on desktop 1920 and mobile 390). Covered RBAC, demo login + isolation, tasks (create title-only / full panel, board drag persist, list inline edits, group-by assignee/label, column hide, saved views, label filter, CSV/JSON export incl. escaping, done -> completed_at/by + activity, archive), task detail (comment @mention, checklist, subtask, upload attachment, card color, review approve), chat (Enter send, reply, react, edit, delete, pin, emoji, sticker, poll create+vote, DM via New message, voice call start/join/leave), private group 404 for non-member, groups create/join/edit/archive, directory grid/list/search, profile self-edit, phone visibility, org chart add/rename/move-via-table/delete-with-reassign/export, settings dark mode persist, theme editor save/reset, contrast warning, dashboard background persist, widget hide/reorder/restore, notifications + mark all read, Ctrl+K global search, mobile bottom nav / More drawer / chat composer / board horizontal scroll / no page overflow. Found and fixed 2 bugs (dashboard widgets rendered twice; regex 500 on task/message search). Remaining issues are minor.",
+  "backend_issues": {
+    "critical": [],
+    "minor": [
+      {"endpoint": "GET /api/tasks?q=, /api/tasks/export?q=, /api/conversations/{id}/messages?q=", "issue": "FIXED BY TESTER: unescaped user input was used as a Mongo $regex, so '(' or '[' caused 500 (OperationFailure). Now wrapped in re.escape."},
+      {"endpoint": "GET /api/search", "issue": "Task results include archived tasks (no archived:{$ne:true} filter); also groups search includes archived groups."},
+      {"endpoint": "routes_tasks.broadcast()", "issue": "'tasks:changed' websocket event goes to every connected user in all workspaces (demo + internal), not just the actor's workspace. It only triggers refetches, but it's still a cross-tenant leak and wastes requests."},
+      {"endpoint": "GET /api/admin/stats", "issue": "online_now counts all websocket connections across workspaces (demo users are counted in ws_internal stats)."},
+      {"endpoint": "POST /api/tasks/{id}/comments (frontend mention parsing)", "issue": "Mentions match on '@FirstName' only. '@Test Employee' mentioned both Test Admin and Test Employee (mention_ids=[test_admin_1,test_emp_1]). Colleagues who share a first name will get the wrong mentions."},
+      {"endpoint": "Tasks", "issue": "There is no DELETE endpoint for tasks, only archive. Fine by spec, but test data can only be archived."}
+    ]
+  },
+  "frontend_issues": {
+    "ui_bugs": [
+      {"component": "Dashboard widgets", "issue": "FIXED BY TESTER: if the user had no saved dashboard.order, the order became DEFAULT_ORDER twice, so every widget showed two times (seen for demo_saeful). Fixed in Dashboard.jsx (baseOrder + Set dedupe).", "selector": "section[data-testid^=widget-]", "priority": "HIGH"},
+      {"component": "Messages conversation list", "issue": "After renaming a group via Edit group, the chat header updates but the left conversation list keeps the old name until reload.", "selector": "[data-testid^=conversation-item-]", "priority": "LOW"},
+      {"component": "Message actions dropdown", "issue": "Picking a quick reaction (react-*) doesn't close the dropdown. The next click on the trigger closes it instead of opening it.", "selector": "[data-testid^=react-]", "priority": "LOW"},
+      {"component": "Task list view", "issue": "When filters return 0 rows (e.g. Archived + label filter), the list area is completely blank, with no empty-state message.", "selector": "[data-testid=task-list-view]", "priority": "LOW"}
+    ],
+    "integration_issues": [],
+    "design_issues": [
+      {"screen": "Dashboard Upcoming Meetings / Personal Reminders", "issues": ["Uses the browser's native datetime-local picker instead of the shadcn calendar", "The text input is squeezed so the placeholder is cut off ('Add meetin', 'Add remind')"]},
+      {"screen": "Task create/detail", "issues": ["Deadline/start use native date/time inputs instead of the shadcn calendar. A date-only deadline shows as 05:00 PM in the detail even though deadline_has_time=false"]},
+      {"screen": "Global search modal", "issues": ["The focus outline is a red rectangle that sits only around part of the input and doesn't follow the rounded modal corners"]},
+      {"screen": "Mobile chat (390px)", "issues": ["A '+ Poll' text link sits cramped below the composer at the bottom-left edge with little padding"]},
+      {"screen": "Poll card", "issues": ["'1 votes' should be '1 vote'"]}
+    ]
+  },
+  "test_report_links": ["/app/backend/tests/test_circle_api.py", "/app/test_reports/pytest/pytest_results.xml"],
+  "action_items": [
+    "Exclude archived tasks/groups from /api/search results",
+    "Scope the tasks:changed broadcast (and admin online_now) to users of the same workspace",
+    "Resolve mentions by user_id from a suggestion picker (or match the full name) instead of first name only",
+    "Refresh the conversation list after group edit/rename",
+    "Close the message-actions dropdown after a quick reaction",
+    "Add an empty state to the task list view when there are no rows",
+    "Replace native date/datetime inputs (dashboard meetings/reminders, task deadline/start) with shadcn Calendar/Popover, and widen the reminder/meeting text inputs",
+    "Polish the global search focus ring, the mobile '+ Poll' placement and the 'votes' plural"
+  ],
+  "critical_code_review_comments": [
+    "routes_tasks.build_query and routes_chat.messages used raw user input in $regex (fixed with re.escape). Check any other $regex usage.",
+    "GET /api/tasks/{id} and comments don't check visibility beyond workspace. Any workspace member can read or comment on any task. Acceptable for an internal workspace, but worth confirming.",
+    "Endpoints accept raw dict Body without Pydantic models. Validation is done by hand and is inconsistent (e.g. card_color, checklist shape and deadline format aren't validated).",
+    "routes_chat.py is 546 lines and growing; consider splitting calls/polls/stickers into their own modules.",
+    "Sync `requests` calls (object storage, OAuth session-data) run inside async endpoints and block the event loop; use httpx.AsyncClient or run_in_threadpool."
+  ],
+  "updated_files": ["/app/frontend/src/pages/Dashboard.jsx", "/app/backend/routes_tasks.py", "/app/backend/routes_chat.py", "/app/backend/tests/test_circle_api.py"],
+  "success_rate": {"backend": "100% (27/27 after fix; 3 regex 500s found and fixed)", "frontend": "~95% (all requested flows work; 1 high-priority widget duplication fixed; minor UX/design items open)"},
+  "test_credentials": "Used /app/memory/test_credentials.md: cookie/bearer test_session_admin (super_admin), test_session_emp (employee), demo login demo_saeful",
+  "seed_data_creation": "Created TEST_ prefixed tasks/groups/units/labels and cleaned up: TEST tasks archived (no delete endpoint; this also archived the main agent's T-1 TEST_smoke), TEST groups deleted (soft), TEST org units deleted, TEST labels archived (in use). Test messages/polls remain in the Internal group and the Admin<->Employee DM. test_emp_1 bio/phone/city and test_admin_1 phone were modified.",
+  "retest_needed": false,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "Run `cd /app/backend && python -m pytest tests/test_circle_api.py` (pytest.ini forces -n 2 loadscope). Internal group id grp_ccfa5fc44426. Use cookie session_token on domain circle-team.preview.emergentagent.com for Playwright. A real user 'Saeful Rohman' (user_8ee248b167d8) is active in ws_internal, so don't touch their data. Container clock is Oct 2026. Not tested: org CSV import, admin settings panels (invitations, roles, workspace theme, statuses), timeline/calendar views, projects, real WebRTC media, push notifications.",
+  "rca of the issue": "Dashboard duplicate widgets: order = [...(dash.order||DEFAULT).filter(..), ...DEFAULT.filter(k => !(dash.order||[]).includes(k))]. With dash.order undefined, the second list is the full DEFAULT again. Search 500: a raw string was passed to Mongo $regex, so invalid patterns raise OperationFailure (code 51091)."
+}

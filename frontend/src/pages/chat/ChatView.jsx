@@ -167,8 +167,8 @@ export default function ChatView({ cid, onChange }) {
           <div className="border-t bg-surface p-4 text-center"><button onClick={join} className="btn-accent h-11 px-6 font-semibold" data-testid="join-group-btn">Join {conv.name}</button></div>
         ) : <Composer conv={conv} reply={reply} onCancelReply={() => setReply(null)} onPoll={() => setPoll(true)} onSent={(m) => setMsgs((x) => (x.some((y) => y.id === m.id) ? x : [...x, m]))} />}
       </div>
-      {panel && <aside className="hidden w-[320px] shrink-0 border-l bg-surface xl:block"><Panel conv={conv} reload={loadConv} onClose={() => setPanel(false)} /></aside>}
-      <Sheet open={mobilePanel} onOpenChange={setMobilePanel}><SheetContent className="w-full bg-surface p-0 sm:max-w-sm"><SheetHeader className="sr-only"><SheetTitle>Details</SheetTitle></SheetHeader><Panel conv={conv} reload={loadConv} onClose={() => setMobilePanel(false)} /></SheetContent></Sheet>
+      {panel && <aside className="hidden w-[320px] shrink-0 border-l bg-surface xl:block"><Panel conv={conv} reload={() => { loadConv(); onChange(); }} onClose={() => setPanel(false)} /></aside>}
+      <Sheet open={mobilePanel} onOpenChange={setMobilePanel}><SheetContent className="w-full bg-surface p-0 sm:max-w-sm"><SheetHeader className="sr-only"><SheetTitle>Details</SheetTitle></SheetHeader><Panel conv={conv} reload={() => { loadConv(); onChange(); }} onClose={() => setMobilePanel(false)} /></SheetContent></Sheet>
       <CreatePollDialog open={poll} onOpenChange={setPoll} conversationId={cid} />
       <TaskCreate open={!!taskFrom} onOpenChange={(v) => !v && setTaskFrom(null)} preset={taskFrom ? { title: (taskFrom.text || "Task from message").slice(0, 120), description: `<p>${(taskFrom.text || "").replace(/</g, "&lt;")}</p><p><i>From conversation: ${title}</i></p>`, conversation_id: cid, message_id: taskFrom.id } : null} onCreated={(t) => { setTaskFrom(null); api.post(`/tasks/${t.id}/share`, { conversation_id: cid }).catch(() => {}); loadConv(); }} />
     </div>

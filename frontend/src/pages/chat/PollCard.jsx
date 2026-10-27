@@ -45,7 +45,7 @@ export default function PollCard({ pollId, poll: initial, compact }) {
         })}
       </div>
       <div className="mt-3 flex items-center justify-between text-xs text-sub">
-        <span data-testid="poll-total-votes">{p.total_votes} votes · <span className={open ? "text-emerald-600" : ""}>{open ? "Open" : "Closed"}</span>{open && p.expires_at && <span className="ml-1 inline-flex items-center gap-1"><Clock size={11} />{formatDistanceToNowStrict(new Date(p.expires_at))} left</span>}</span>
+        <span data-testid="poll-total-votes">{p.total_votes} {p.total_votes === 1 ? "vote" : "votes"} · <span className={open ? "text-emerald-600" : ""}>{open ? "Open" : "Closed"}</span>{open && p.expires_at && <span className="ml-1 inline-flex items-center gap-1"><Clock size={11} />{formatDistanceToNowStrict(new Date(p.expires_at))} left</span>}</span>
         {canVote && <button onClick={submit} disabled={!sel.length} className="btn-accent h-8 px-3 text-xs font-semibold disabled:opacity-40" data-testid="poll-vote-btn">{voted ? "Change vote" : "Vote"}</button>}
       </div>
     </div>

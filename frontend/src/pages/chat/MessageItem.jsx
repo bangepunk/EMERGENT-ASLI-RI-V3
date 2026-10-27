@@ -75,7 +75,7 @@ export default function MessageItem({ m, mine, grouped, conv, onReply, onCreateT
               <DropdownMenu>
                 <DropdownMenuTrigger asChild><button className="flex h-8 w-8 items-center justify-center rounded-full text-sub hover:bg-surface2" aria-label="Message actions" data-testid={`message-actions-${m.id}`}><MoreHorizontal size={16} /></button></DropdownMenuTrigger>
                 <DropdownMenuContent align={mine ? "end" : "start"} className="bg-surface">
-                  <div className="flex gap-0.5 p-1">{QUICK.map((e) => <button key={e} onClick={() => react(e)} className="h-8 w-8 rounded-lg text-lg hover:bg-surface2" data-testid={`react-${e}`}>{e}</button>)}</div>
+                  <div className="flex gap-0.5 p-1">{QUICK.map((e) => <DropdownMenuItem key={e} onClick={() => react(e)} className="h-8 w-8 justify-center rounded-lg p-0 text-lg" data-testid={`react-${e}`}>{e}</DropdownMenuItem>)}</div>
                   <DropdownMenuItem onClick={() => onReply(m)} data-testid="action-reply"><Reply size={14} className="mr-2" />Reply</DropdownMenuItem>
                   <DropdownMenuItem onClick={act(() => api.post(`/messages/${m.id}/pin`))} data-testid="action-pin"><Pin size={14} className="mr-2" />{m.pinned ? "Unpin" : "Pin"}</DropdownMenuItem>
                   <DropdownMenuItem onClick={() => onCreateTask(m)} data-testid="action-create-task"><CheckSquare size={14} className="mr-2" />Create task</DropdownMenuItem>
