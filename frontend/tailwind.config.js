@@ -1,0 +1,53 @@
+/** @type {import('tailwindcss').Config} */
+module.exports = {
+  blocklist: ["overline"],
+  darkMode: ["class"],
+  content: ["./src/**/*.{js,jsx,ts,tsx}", "./public/index.html"],
+  theme: {
+    extend: {
+      fontFamily: { sans: ['"Plus Jakarta Sans"', "Inter", "system-ui", "sans-serif"] },
+      borderRadius: {
+        lg: "var(--radius)",
+        md: "calc(var(--radius) - 4px)",
+        sm: "calc(var(--radius) - 6px)",
+        xl: "calc(var(--radius) + 2px)",
+        "2xl": "calc(var(--radius) + 6px)",
+        "3xl": "calc(var(--radius) + 10px)",
+      },
+      colors: {
+        background: "var(--c-bg)",
+        foreground: "var(--c-text)",
+        card: { DEFAULT: "var(--c-surface)", foreground: "var(--c-text)" },
+        popover: { DEFAULT: "var(--c-surface)", foreground: "var(--c-text)" },
+        primary: { DEFAULT: "var(--c-accent)", foreground: "#FFFFFF" },
+        secondary: { DEFAULT: "var(--c-surface2)", foreground: "var(--c-text)" },
+        muted: { DEFAULT: "var(--c-surface2)", foreground: "var(--c-muted)" },
+        accent: { DEFAULT: "var(--c-surface2)", foreground: "var(--c-text)" },
+        destructive: { DEFAULT: "#E5484D", foreground: "#FFFFFF" },
+        border: "var(--c-border)",
+        input: "var(--c-border)",
+        ring: "var(--c-accent)",
+        surface: "var(--c-surface)",
+        surface2: "var(--c-surface2)",
+        sidebar: "var(--c-sidebar)",
+        ink: "var(--c-text)",
+        sub: "var(--c-muted)",
+        brand: { DEFAULT: "var(--c-accent)", hover: "var(--c-accent-hover)", 2: "var(--c-accent2)" },
+        soft: { red: "var(--s-red)", blue: "var(--s-blue)", purple: "var(--s-purple)", green: "var(--s-green)", yellow: "var(--s-yellow)" },
+      },
+      keyframes: {
+        "accordion-down": { from: { height: "0" }, to: { height: "var(--radix-accordion-content-height)" } },
+        "accordion-up": { from: { height: "var(--radix-accordion-content-height)" }, to: { height: "0" } },
+        rise: { from: { opacity: 0, transform: "translateY(8px)" }, to: { opacity: 1, transform: "translateY(0)" } },
+        float: { "0%,100%": { transform: "translateY(0)" }, "50%": { transform: "translateY(-8px)" } },
+      },
+      animation: {
+        "accordion-down": "accordion-down 0.2s ease-out",
+        "accordion-up": "accordion-up 0.2s ease-out",
+        rise: "rise .45s cubic-bezier(.2,.7,.2,1) both",
+        float: "float 6s ease-in-out infinite",
+      },
+    },
+  },
+  plugins: [require("tailwindcss-animate")],
+};

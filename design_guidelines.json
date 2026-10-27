@@ -1,0 +1,125 @@
+{
+  "app_name": "CIRCLE",
+  "tagline": "Your Team. One Circle.",
+  "app_type": "saas_app / dashboard",
+  "identity_and_vibe": {
+    "style": "Friendly, minimal, colorful, soft playful dashboard with rounded floating cards and subtle shadows",
+    "theme_mode": "Light default + Dark mode support with dynamic CSS variables",
+    "radii": {
+      "standard_cards": "12px-16px (rounded-xl / rounded-2xl)",
+      "large_cards": "16px-24px (rounded-2xl / rounded-3xl)",
+      "buttons_pills": "9999px (rounded-full) or 12px (rounded-xl)"
+    }
+  },
+  "typography": {
+    "font_family": "Inter, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
+    "headings": {
+      "h1": "text-3xl sm:text-4xl lg:text-5xl font-bold tracking-tight text-slate-900 dark:text-slate-100",
+      "h2": "text-2xl sm:text-3xl font-semibold tracking-tight text-slate-900 dark:text-slate-100",
+      "h3": "text-lg sm:text-xl font-semibold text-slate-800 dark:text-slate-200",
+      "h4": "text-base font-semibold text-slate-800 dark:text-slate-200"
+    },
+    "body": "text-sm sm:text-base leading-relaxed text-[#20283B] dark:text-[#F4F6FC]",
+    "caption_labels": "text-xs font-medium uppercase tracking-wider text-[#778198] dark:text-[#A4AEC2]"
+  },
+  "colors": {
+    "light": {
+      "background": "#F5F7FB",
+      "surface": "#FFFFFF",
+      "secondary_surface": "#F0F4FA",
+      "text": "#20283B",
+      "secondary_text": "#778198",
+      "border": "#E6EAF1",
+      "accent": "#FF5364",
+      "accent_hover": "#F04456",
+      "soft_red": "#FFF0F2",
+      "soft_blue": "#DDEEFF",
+      "soft_purple": "#EEE6FF",
+      "soft_green": "#DFF7E8",
+      "soft_yellow": "#FFF3C4"
+    },
+    "dark": {
+      "background": "#101522",
+      "surface": "#171E2E",
+      "secondary_surface": "#202A3D",
+      "text": "#F4F6FC",
+      "secondary_text": "#A4AEC2",
+      "border": "#2B3549",
+      "accent": "#FF5364"
+    },
+    "kanban_columns": {
+      "to_do": "bg-[#DDEEFF] border-[#B8D8FF] text-[#1E40AF]",
+      "in_progress": "bg-[#EEE6FF] border-[#D6C4FF] text-[#5B21B6]",
+      "in_review": "bg-[#FFF3C4] border-[#FFE28A] text-[#92400E]",
+      "done": "bg-[#DFF7E8] border-[#A7F3D0] text-[#065F46]"
+    }
+  },
+  "layout_architecture": {
+    "login_page": "Split screen layout with left brand gradient panel (floating widgets, avatar circles, quote) and right interactive form (Google SSO, email input, quick Demo mode switch).",
+    "desktop_layout": "Three-panel desktop architecture: Left sidebar (Fixed 240px, includes workspace logo, search ⌘K, Home, Messages, Groups, Directory, Org Structure, Tasks, Projects, Polls, Notifications, Settings, Profile & Theme shortcut at bottom), Center main workspace view, and Collapsible Right context panel (Details, Thread, Member status, Activity feed).",
+    "mobile_layout": "Bottom navigation bar (Home, Messages, Tasks, Notifications) with a sliding 'More' drawer for Directory, Org Chart, Polls, and Settings.",
+    "customizable_backgrounds": [
+      {"id": "solid", "label": "Solid Neutral", "style": "bg-[#F5F7FB] dark:bg-[#101522]"},
+      {"id": "gradient", "label": "Soft Pastels", "style": "bg-gradient-to-br from-[#FFF0F2] via-[#EEE6FF] to-[#DDEEFF] dark:from-[#171E2E] dark:via-[#202A3D] dark:to-[#101522]"},
+      {"id": "abstract", "label": "Abstract Dunes", "url": "https://images.unsplash.com/photo-1692890846581-da1a95435f34?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjY2NzV8MHwxfHNlYXJjaHwyfHxhYnN0cmFjdCUyMGdyYWRpZW50JTIwY29sb3JmdWwlMjBtaW5pbWFsaXN0JTIwbGFuZHNjYXBlJTIwd2FsbHBhcGVyfGVufDB8fHx8MTc5MzExMDU3MXww&ixlib=rb-4.1.0&q=85"},
+      {"id": "nature", "label": "Purple Skyline", "url": "https://images.unsplash.com/photo-1663970206537-2d24183b59c6?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjY2NzV8MHwxfHNlYXJjaHxfHxhYnN0cmFjdCUyMGdyYWRpZW50JTIwY29sb3JmdWwlMjBtaW5pbWFsaXN0JTIwbGFuZHNjYXBlJTIwd2FsbHBhcGVyfGVufDB8fHx8MTc5MzExMDU3MXww&ixlib=rb-4.1.0&q=85"}
+    ]
+  },
+  "key_modules_and_components": {
+    "dashboard_widgets": [
+      "Today's Tasks (checklist + quick add)",
+      "Upcoming Deadlines (countdown badges)",
+      "My Projects (progress bars + active status)",
+      "Recent Conversations (quick reply preview)",
+      "Completed Summary (metric cards with micro-charts)",
+      "Team Activity Feed (avatar stack + live status)",
+      "Quick Actions (Create Task, Start Poll, Huddle, New Doc)",
+      "Reminders & Sticky Notes"
+    ],
+    "chat_features": [
+      "Direct Messages & Group Channels",
+      "Message Reactions (Emoji picker)",
+      "Threaded Replies",
+      "Interactive Stickers & Poll cards in chat",
+      "Audio/Video Call Huddle overlay"
+    ],
+    "task_management": [
+      "Kanban Board (To Do, In Progress, In Review, Done with pastel backgrounds)",
+      "Notion-like Grouped Task Database List (Customizable columns: Status, Assignee, Priority, IP/Brand, Due Date)",
+      "Interactive Timeline / Gantt view",
+      "Calendar View"
+    ],
+    "org_and_directory": [
+      "Interactive Org Chart with node expansion and reporting lines",
+      "Team Directory with search, filters, skill tags, and status indicators"
+    ],
+    "theme_editor": "Live Theme Customizer modal allowing real-time CSS variable updates for primary accent, card radius, background mode, and surface density."
+  },
+  "image_urls": {
+    "team_collaboration": "https://images.unsplash.com/photo-1572021335469-31706a17aaef?crop=entropy&cs=srgb&fm=jpg&ixid=M3w3NTY2NzV8MHwxfHNlYXJjaHwzfHxtb2Rlcm4lMjBvZmZpY2UlMjB0ZWFtJTIwd29ya3NwYWNlJTIwY29sb3JmdWwlMjBkaXZlcnNpdHl8ZW58MHx8fDE3OTMxMTA1NjV8MA&ixlib=rb-4.1.0&q=85",
+    "team_office": "https://images.unsplash.com/photo-1559136555-9303baea8ebd?crop=entropy&cs=srgb&fm=jpg&ixid=M3w3NTY2NzV8MHwxfHNlYXJjaHwxfHxtb2Rlcm4lMjBvZmZpY2UlMjB0ZWFtJTIwd29ya3NwYWNlJTIwY29sb3JmdWwlMjBkaXZlcnNpdHl8ZW58MHx8fDE3OTMxMTA1NjV8MA&ixlib=rb-4.1.0&q=85",
+    "avatars": [
+      "https://images.unsplash.com/photo-1740252117044-2af197eea287?crop=entropy&cs=srgb&fm=jpg&ixid=M3w3NDQ2MzR8MHwxfHNlYXJjaHwxfHx1c2VyJTIwYXZhdGFyJTIwcHJvZmlsZSUyMHBvcnRyYWl0JTIwZGl2ZXJzZSUyMHdvcmtlcnxlbnwwfHx8fDE3OTMxMTA1NzF8MA&ixlib=rb-4.1.0&q=85",
+      "https://images.unsplash.com/photo-1740252117013-4fb21771e7ca?crop=entropy&cs=srgb&fm=jpg&ixid=M3w3NDQ2MzR8MHwxfHNlYXJjaHwyfHx1c2VyJTIwYXZhdGFyJTIwcHJvZmlsZSUyMHBvcnRyYWl0JTIwZGl2ZXJzZSUyMHdvcmtlcnxlbnwwfHx8fDE3OTMxMTA1NzF8MA&ixlib=rb-4.1.0&q=85",
+      "https://images.unsplash.com/photo-1740252117012-bb53ad05e370?crop=entropy&cs=srgb&fm=jpg&ixid=M3w3NDQ2MzR8MHwxfHNlYXJjaHwzfHx1c2VyJTIwYXZhdGFyJTIwcHJvZmlsZSUyMHBvcnRyYWl0JTIwZGl2ZXJzZSUyMHdvcmtlcnxlbnwwfHx8fDE3OTMxMTA1NzF8MA&ixlib=rb-4.1.0&q=85"
+    ],
+    "background_wallpapers": [
+      "https://images.unsplash.com/photo-1692890846581-da1a95435f34?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjY2NzV8MHwxfHNlYXJjaHwyfHxhYnN0cmFjdCUyMGdyYWRpZW50JTIwY29sb3JmdWwlMjBtaW5pbWFsaXN0JTIwbGFuZHNjYXBlJTIwd2FsbHBhcGVyfGVufDB8fHx8MTc5MzExMDU3MXww&ixlib=rb-4.1.0&q=85",
+      "https://images.unsplash.com/photo-1579546929518-9e396f3cc809?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjY2NzV8MHwxfHNlYXJjaHwzfHxhYnN0cmFjdCUyMGdyYWRpZW50JTIwY29sb3JmdWwlMjBtaW5pbWFsaXN0JTIwbGFuZHNjYXBlJTIwd2FsbHBhcGVyfGVufDB8fHx8MTc5MzExMDU3MXww&ixlib=rb-4.1.0&q=85",
+      "https://images.unsplash.com/photo-1663970206537-2d24183b59c6?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjY2NzV8MHwxfHNlYXJjaHxfHxhYnN0cmFjdCUyMGdyYWRpZW50JTIwY29sb3JmdWwlMjBtaW5pbWFsaXN0JTIwbGFuZHNjYXBlJTIwd2FsbHBhcGVyfGVufDB8fHx8MTc5MzExMDU3MXww&ixlib=rb-4.1.0&q=85"
+    ]
+  },
+  "instructions_to_main_agent": [
+    "Ensure all components use .js / .jsx format matching the React set-up in /src.",
+    "Import Lucide icons for UI actions and navigation.",
+    "Add data-testid attributes to all interactive and key data display elements (e.g., data-testid='login-google-button', data-testid='sidebar-home-link', data-testid='kanban-column-todo').",
+    "Ensure dropdowns, modals, and tooltips have non-transparent backgrounds (e.g., bg-white dark:bg-[#171E2E] shadow-xl) to avoid text overlap issues.",
+    "Implement smooth micro-interactions on hover and active states without breaking CSS transforms."
+  ],
+  "UNIVERSAL GUIDELINES FOR MAIN AGENT": [
+    "Never center-align the main App container globally.",
+    "Use generous padding inside bordered containers (p-4 to p-6).",
+    "Strictly avoid generic AI emojis as UI icons; use Lucide react icons instead.",
+    "Ensure color contrast meets WCAG AA standards (minimum 4.5:1 for standard text)."
+  ]
+}
