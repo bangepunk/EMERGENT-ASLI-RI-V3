@@ -5,7 +5,7 @@ import { PageHeader } from "../components/common";
 import { Switch } from "../components/ui/switch";
 import ThemeEditor from "./settings/ThemeEditor";
 import BackgroundEditor from "./settings/BackgroundEditor";
-import { Card, AdminOverview, PeopleAccess, WorkspaceBranding, LabelsAdmin, StatusesAdmin, ProfileFieldsAdmin, StickersAdmin } from "./settings/AdminPanels";
+import { Card, AdminOverview, PeopleAccess, WorkspaceBranding, DivisionsAdmin, LabelsAdmin, StatusesAdmin, ProfileFieldsAdmin, StickersAdmin } from "./settings/AdminPanels";
 
 const CATS = [["messages", "Direct & group messages"], ["mentions", "Mentions"], ["calls", "Calls & missed calls"], ["tasks", "Task assignments, reviews & completion"], ["deadlines", "Upcoming & overdue deadlines"], ["polls", "New polls"], ["groups", "Group invitations"], ["org", "Organization changes"]];
 
@@ -53,7 +53,7 @@ export default function Settings() {
           {tab === "statuses" && <StatusesAdmin />}
           {tab === "admin" && <AdminOverview />}
           {tab === "access" && <PeopleAccess />}
-          {tab === "workspace" && <WorkspaceBranding />}
+          {tab === "workspace" && <div className="space-y-5"><WorkspaceBranding /><DivisionsAdmin /></div>}
           {tab === "fields" && <ProfileFieldsAdmin />}
           {tab === "stickers" && <StickersAdmin />}
         </div>

@@ -8,8 +8,8 @@ router = APIRouter(prefix="/api")
 RANK = {"everyone": 0, "managers": 1, "admins": 2}
 DEFAULT_VIS = {"phone": "managers", "employee_id": "managers", "employment_status": "managers", "join_date": "everyone", "email": "everyone"}
 SELF_EDITABLE = {"name", "picture", "phone", "bio", "skills", "work_mode", "city", "office", "custom_location", "location_status",
-                 "share_location", "timezone", "custom"}
-ADMIN_EDITABLE = SELF_EDITABLE | {"employee_id", "job_title", "department", "division", "team", "employment_status", "join_date", "manager_id"}
+                 "share_location", "timezone", "custom", "nickname"}
+ADMIN_EDITABLE = SELF_EDITABLE | {"company", "employee_id", "job_title", "department", "division", "team", "employment_status", "join_date", "manager_id"}
 LOCATION_FIELDS = ["work_mode", "city", "office", "custom_location", "location_status"]
 
 
@@ -78,6 +78,23 @@ async def get_profile(uid: str, u=Depends(get_user)):
     out["tasks"] = tasks
     out["can_edit"] = viewer_rank(u, t) == 2
     return out
+
+
+@router.post("/me/onboarding")
+async def onboarding(body: dict = Body(...), u=Depends(get_user)):
+    if not u.get("needs_onboarding"):
+        raise HTTPException(400, "Profil sudah dilengkapi")
+    f = {k: str(body.get(k) or "").strip()[:80] for k in ("name", "nickname", "department", "company", "job_title", "phone", "join_date")}
+    missing = [k for k in ("name", "nickname", "department", "company", "job_title") if not f[k]]
+    if missing:
+        raise HTTPException(400, "Lengkapi semua kolom wajib")
+    ws = await db.workspaces.find_one({"id": u["workspace_id"]}, {"_id": 0, "divisions": 1})
+    if f["department"] not in (ws.get("divisions") or []):
+        raise HTTPException(400, "Divisi tidak valid")
+    if not f["join_date"]:
+        f.pop("join_date")
+    await db.users.update_one({"user_id": u["user_id"]}, {"$set": {**f, "needs_onboarding": False}})
+    return await db.users.find_one({"user_id": u["user_id"]}, {"_id": 0})
 
 
 @router.patch("/users/{uid}")

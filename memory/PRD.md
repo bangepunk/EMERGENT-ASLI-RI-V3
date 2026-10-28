@@ -29,6 +29,12 @@ Creative, marketing, product teams, management; workspace admins.
 - Polls tab removed; polls only creatable in group chats
 - Directory simplified: multi-select division tabs + name search
 
+## Onboarding form (2026-10-28)
+- New real users (first Google login) get needs_onboarding=true → full-screen "Lengkapi profil kamu" form before entering app (existing users not affected)
+- Fields: nama lengkap*, nama panggilan*, divisi* (admin-managed list), company* (pick from labels or type), jabatan*, nomor HP, tanggal mulai kerja
+- POST /api/me/onboarding; divisi stored as department (feeds Directory tabs); workspace.divisions managed in Settings → Workspace → Daftar divisi
+- Directory card shows nickname + company chip
+
 ## Backlog
 - P1: shadcn date pickers instead of native inputs; TURN server for calls behind strict NATs; true browser push (service worker) when tab closed; link previews for URLs.
 - P2: drag reorder of org units among siblings (API exists), message threads view, sticker pack management UI per pack, larger-group calls via SFU.

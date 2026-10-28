@@ -74,6 +74,22 @@ export function WorkspaceBranding() {
   );
 }
 
+export function DivisionsAdmin() {
+  const { reloadWs } = useApp();
+  const [list, setList] = useState(null);
+  const [n, setN] = useState("");
+  useEffect(() => { api.get("/workspace").then((r) => setList(r.data.divisions || [])); }, []);
+  const save = (l) => run(() => api.patch("/workspace", { divisions: l }), "Divisi disimpan").then((ok) => { if (ok) { setList(l); reloadWs(); } });
+  const add = () => { if (n.trim() && !list.includes(n.trim())) { save([...list, n.trim()]); setN(""); } };
+  if (!list) return null;
+  return (
+    <Card title="Daftar divisi (form profil karyawan baru)" testid="divisions-admin">
+      <div className="flex gap-2"><input value={n} onChange={(e) => setN(e.target.value)} onKeyDown={(e) => e.key === "Enter" && add()} placeholder="Nama divisi" className={`${inp} flex-1`} data-testid="division-name-input" /><button onClick={add} className="btn-accent h-10 px-4 text-sm font-semibold" data-testid="division-add-btn"><Plus size={14} /></button></div>
+      <div className="mt-3 flex flex-wrap gap-2">{list.map((d) => <span key={d} className="flex items-center gap-1.5 rounded-full bg-surface2 px-3 py-1.5 text-sm" data-testid={`division-item-${d.replace(/\s/g, "-")}`}>{d}<button onClick={() => save(list.filter((x) => x !== d))} className="text-sub hover:text-rose-500" aria-label={`Hapus ${d}`} data-testid={`division-remove-${d.replace(/\s/g, "-")}`}><Trash2 size={12} /></button></span>)}{!list.length && <span className="text-sm text-sub">Belum ada divisi.</span>}</div>
+    </Card>
+  );
+}
+
 export function LabelsAdmin() {
   const { labels, reloadLabels, isManager } = useApp();
   const [n, setN] = useState({ name: "", color: "#2F7DE1", description: "" });

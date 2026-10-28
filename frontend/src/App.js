@@ -16,6 +16,7 @@ import Tasks from "./pages/Tasks";
 import Projects from "./pages/Projects";
 import { NotificationList } from "./components/NotificationPanel";
 import Settings from "./pages/Settings";
+import Onboarding from "./pages/Onboarding";
 
 function AuthCallback() {
   const done = useRef(false);
@@ -37,6 +38,7 @@ function Protected({ children }) {
   const { session } = useApp();
   if (session === undefined) return <Spinner label="Loading CIRCLE" />;
   if (!session) return <Navigate to="/login" replace />;
+  if (session.user?.needs_onboarding) return <Onboarding />;
   return children;
 }
 

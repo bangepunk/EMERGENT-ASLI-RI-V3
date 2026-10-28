@@ -66,7 +66,7 @@ async def auth_session(response: Response, body: dict = Body(...)):
              "division": "", "team": "", "org_unit_id": None, "manager_id": None, "employment_status": "Full-time",
              "join_date": now_iso()[:10], "work_mode": "Office", "city": "", "office": "", "custom_location": "",
              "share_location": True, "timezone": "Asia/Jakarta", "bio": "", "skills": [], "phone": "", "employee_id": "",
-             "custom": {}, "created_at": now_iso(), "last_login": now_iso()}
+             "custom": {}, "nickname": "", "company": "", "needs_onboarding": True, "created_at": now_iso(), "last_login": now_iso()}
         await db.users.insert_one(dict(u))
         if invite:
             await db.invitations.update_one({"id": invite["id"]}, {"$set": {"used": True}})

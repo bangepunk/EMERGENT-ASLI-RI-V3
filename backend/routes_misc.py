@@ -7,7 +7,7 @@ from core import db, now_iso, new_id, get_user, is_admin, require_admin, notify,
 router = APIRouter(prefix="/api")
 P = {"_id": 0}
 PREF_KEYS = {"theme_mode", "theme", "background", "dashboard", "notifications", "task_columns", "task_card_style", "push_enabled", "task_view"}
-WS_KEYS = {"name", "tagline", "description", "logo_file_id", "theme", "allowed_domains", "auto_join_domain", "require_approval", "org_levels"}
+WS_KEYS = {"name", "tagline", "description", "logo_file_id", "theme", "allowed_domains", "auto_join_domain", "require_approval", "org_levels", "divisions"}
 MAX_SIZE = 15 * 1024 * 1024
 ALLOWED = {"image/png", "image/jpeg", "image/gif", "image/webp", "application/pdf", "text/plain", "text/csv",
            "application/msword", "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
@@ -32,7 +32,13 @@ async def set_prefs(body: dict = Body(...), u=Depends(get_user)):
 
 @router.get("/workspace")
 async def get_ws(u=Depends(get_user)):
-    return await db.workspaces.find_one({"id": u["workspace_id"]}, P)
+    ws = await db.workspaces.find_one({"id": u["workspace_id"]}, P)
+    if "divisions" not in ws:
+        units = await db.org_units.distinct("name", {"workspace_id": ws["id"], "level": "Department"})
+        depts = await db.users.distinct("department", {"workspace_id": ws["id"]})
+        ws["divisions"] = sorted({d for d in units + depts if d})
+        await db.workspaces.update_one({"id": ws["id"]}, {"$set": {"divisions": ws["divisions"]}})
+    return ws
 
 
 @router.get("/public/branding")
@@ -47,6 +53,8 @@ async def update_ws(body: dict = Body(...), u=Depends(get_user)):
     upd = {k: v for k, v in body.items() if k in WS_KEYS}
     if "allowed_domains" in upd:
         upd["allowed_domains"] = [d.strip().lower().lstrip("@") for d in upd["allowed_domains"] if d.strip()]
+    if "divisions" in upd:
+        upd["divisions"] = list(dict.fromkeys(str(d).strip()[:60] for d in upd["divisions"] if str(d).strip()))
     if "brand_name" in body:
         upd["brand_name"] = body["brand_name"]
     await db.workspaces.update_one({"id": u["workspace_id"]}, {"$set": upd})

@@ -27,9 +27,10 @@ export default function Directory() {
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
           {list.map((u) => (
             <div key={u.user_id} className="card flex flex-col p-5" data-testid={`employee-card-${u.user_id}`}>
-              <button onClick={() => navigate(`/people/${u.user_id}`)} className="flex items-center gap-3 text-left"><Avatar user={u} size={52} /><div className="min-w-0"><p className="truncate font-bold">{u.name}</p><p className="truncate text-sm text-sub">{u.job_title || "—"}</p></div></button>
+              <button onClick={() => navigate(`/people/${u.user_id}`)} className="flex items-center gap-3 text-left"><Avatar user={u} size={52} /><div className="min-w-0"><p className="truncate font-bold">{u.name}{u.nickname && <span className="font-medium text-sub"> ({u.nickname})</span>}</p><p className="truncate text-sm text-sub">{u.job_title || "—"}</p></div></button>
               <div className="mt-4 flex flex-wrap gap-1.5 text-xs">
                 {u.department && <span className="rounded-full bg-soft-blue px-2.5 py-1 font-medium">{u.department}</span>}
+                {u.company && <span className="rounded-full bg-soft-purple px-2.5 py-1 font-medium" data-testid={`employee-company-${u.user_id}`}>{u.company}</span>}
                 {(u.office || u.city) && <span className="flex items-center gap-1 rounded-full bg-surface2 px-2.5 py-1 text-sub"><MapPin size={11} />{u.office || u.city}{u.work_mode ? ` · ${u.work_mode}` : ""}</span>}
                 <span className={`rounded-full px-2.5 py-1 font-medium ${online.has(u.user_id) ? "bg-soft-green text-emerald-700 dark:text-emerald-300" : "bg-surface2 text-sub"}`}>{online.has(u.user_id) ? "Online" : "Offline"}</span>
               </div>
