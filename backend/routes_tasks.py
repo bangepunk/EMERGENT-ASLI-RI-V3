@@ -2,7 +2,7 @@ import csv
 import io
 import json
 from datetime import datetime, timezone, timedelta
-from fastapi import APIRouter, HTTPException, Depends, Body, Request
+from fastapi import APIRouter, HTTPException, Depends, Body, Request, Query
 from fastapi.responses import Response
 from core import db, now_iso, new_id, get_user, is_admin, is_manager, require_manager, notify, manager, audit
 
@@ -11,7 +11,15 @@ P = {"_id": 0}
 PRIORITIES = ["low", "medium", "high", "urgent"]
 TASK_FIELDS = {"title", "description", "status", "assignee_id", "collaborator_ids", "priority", "start_date", "deadline", "deadline_has_time",
                "project_id", "department", "label_ids", "card_color", "card_style", "checklist", "subtasks", "links", "attachments",
-               "estimate", "custom", "reviewer_id", "skip_review", "reminder_at"}
+               "estimate", "custom", "reviewer_id", "skip_review", "reminder_at", "item_type", "link_url", "submit_date"}
+ITEM_COLORS = ["#F87171", "#FB923C", "#FACC15", "#4ADE80", "#60A5FA", "#A78BFA", "#F472B6", "#2DD4BF", "#94A3B8"]
+DEFAULT_ITEMS = [{"name": n, "color": ITEM_COLORS[i]} for i, n in enumerate(["Article Asset", "Article Copywriting", "SocMed Asset", "SocMed Copywriting", "Video Storyline"])]
+
+
+def clean_text_fields(d):
+    for k, n in (("item_type", 60), ("link_url", 1000), ("submit_date", 10)):
+        if k in d:
+            d[k] = str(d[k]).strip()[:n] if d[k] else None
 TRACKED = {"status": "status", "assignee_id": "assignee", "deadline": "deadline", "priority": "priority", "label_ids": "labels",
            "description": "description", "attachments": "attachments", "title": "title", "archived": "archive"}
 
@@ -103,6 +111,7 @@ async def create_task(body: dict = Body(...), u=Depends(get_user)):
     counter = await db.counters.find_one_and_update({"id": f"task_{u['workspace_id']}"}, {"$inc": {"seq": 1}}, upsert=True, return_document=True)
     n = counter["seq"]
     t = {k: body.get(k) for k in TASK_FIELDS if k in body}
+    clean_text_fields(t)
     t.update({"id": new_id("task"), "number": n, "number_str": f"T-{n}", "workspace_id": u["workspace_id"], "title": title[:300],
               "status": status, "priority": body.get("priority") or "medium", "requestor_id": u["user_id"], "created_by": u["user_id"],
               "label_ids": body.get("label_ids") or [], "collaborator_ids": body.get("collaborator_ids") or [],
@@ -153,7 +162,8 @@ async def export_tasks(request: Request, u=Depends(get_user)):
         rows.append({"Task ID": t["number_str"], "Task Name": t["title"], "Description": strip_html(t.get("description") or ""),
                      "Status": smap.get(t["status"], t["status"]), "Requestor": users.get(t.get("requestor_id"), ""),
                      "Assignee": users.get(t.get("assignee_id"), ""), "Priority": (t.get("priority") or "").title(),
-                     "IP / Brand Labels": "; ".join(labels.get(i, "") for i in t.get("label_ids", [])), "Card Color": t.get("card_color") or "",
+                     "IP / Brand Labels": "; ".join(labels.get(i, "") for i in t.get("label_ids", [])), "Item": t.get("item_type") or "",
+                     "Link File/Folder": t.get("link_url") or "", "Submit Date": t.get("submit_date") or "", "Card Color": t.get("card_color") or "",
                      "Created Date": t["created_at"], "Start Date": t.get("start_date") or "", "Deadline": t.get("deadline") or "",
                      "Completion Date": t.get("completed_at") or "", "Project": projects.get(t.get("project_id"), ""),
                      "Department": t.get("department") or "", "Attachments": " ".join(f"{base}/api/files/{a['id']}" for a in t.get("attachments", [])),
@@ -188,6 +198,7 @@ async def get_task(tid: str, u=Depends(get_user)):
 
 async def apply_update(t, body, u, statuses):
     upd = {k: v for k, v in body.items() if k in TASK_FIELDS}
+    clean_text_fields(upd)
     if "title" in upd and not str(upd["title"]).strip():
         raise HTTPException(400, "Task title is required")
     if "priority" in upd and upd["priority"] not in PRIORITIES:
@@ -277,6 +288,39 @@ async def share_task(tid: str, body: dict = Body(...), u=Depends(get_user)):
     c = await get_conv(body.get("conversation_id"), u, member=True)
     card = {k: t.get(k) for k in ("id", "number", "number_str", "title", "status", "priority", "deadline", "label_ids", "assignee_id")}
     return await post_message(c, u, {"type": "task", "text": body.get("text", ""), "task": card, "attachments": []})
+
+
+@router.post("/item-types")
+async def add_item_type(body: dict = Body(...), u=Depends(get_user)):
+    name = (body.get("name") or "").strip()[:60]
+    if not name:
+        raise HTTPException(400, "Nama item wajib diisi")
+    ws = await db.workspaces.find_one({"id": u["workspace_id"]}, {"item_types": 1})
+    items = ws.get("item_types") or []
+    if not any(i["name"].lower() == name.lower() for i in items):
+        items.append({"name": name, "color": ITEM_COLORS[len(items) % len(ITEM_COLORS)]})
+        await db.workspaces.update_one({"id": u["workspace_id"]}, {"$set": {"item_types": items}})
+    return items
+
+
+@router.get("/stats/monthly")
+async def monthly_stats(month: str = Query(None), user_id: str = Query(None), u=Depends(get_user)):
+    try:
+        y, m = map(int, (month or datetime.now(timezone.utc).strftime("%Y-%m")).split("-"))
+        start, end = f"{y:04d}-{m:02d}-01", f"{y + (m == 12):04d}-{m % 12 + 1:02d}-01"
+    except ValueError:
+        raise HTTPException(400, "Invalid month")
+    rng = {"$gte": start, "$lt": end}
+    q = {"workspace_id": u["workspace_id"], "archived": {"$ne": True}, "assignee_id": {"$ne": None},
+         "$or": [{"submit_date": rng}, {"completed_at": rng}, {"deadline": rng}, {"created_at": rng}]}
+    if not is_manager(u):
+        q["assignee_id"] = u["user_id"]
+    elif user_id:
+        q["assignee_id"] = user_id
+    fields = {"_id": 0, "id": 1, "number_str": 1, "title": 1, "item_type": 1, "status": 1, "assignee_id": 1, "label_ids": 1,
+              "submit_date": 1, "deadline": 1, "completed_at": 1, "created_at": 1}
+    tasks = await db.tasks.find(q, fields).sort("created_at", -1).to_list(5000)
+    return {"month": f"{y:04d}-{m:02d}", "scope": "all" if is_manager(u) and not user_id else "user", "tasks": tasks}
 
 
 # ---------- Labels ----------

@@ -1,7 +1,8 @@
 import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { format } from "date-fns";
-import { CheckSquare, Clock, FolderKanban, MessageCircle, CheckCircle2, Activity, Zap, CalendarClock, StickyNote, Plus, Settings2, Image, ArrowUp, ArrowDown, Eye, EyeOff, RotateCcw, Trash2, Hash } from "lucide-react";
+import { CheckSquare, Clock, FolderKanban, MessageCircle, CheckCircle2, Activity, Zap, CalendarClock, StickyNote, Plus, Settings2, Image, ArrowUp, ArrowDown, Eye, EyeOff, RotateCcw, Trash2, Hash, BarChart3 } from "lucide-react";
+import MonthlyStats from "./dashboard/MonthlyStats";
 import { toast } from "sonner";
 import { useApp } from "../context/AppContext";
 import { api, errMsg, fileUrl } from "../lib/api";
@@ -11,13 +12,13 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle } from "../components/ui/s
 import BackgroundEditor from "./settings/BackgroundEditor";
 import TaskCreate from "./tasks/TaskCreate";
 
-const WIDGETS = { today: ["Today's Tasks", CheckSquare], deadlines: ["Upcoming Deadlines", Clock], projects: ["My Projects", FolderKanban], conversations: ["Recent Conversations", MessageCircle], completed: ["Recently Completed", CheckCircle2], activity: ["Team Activity", Activity], quick: ["Quick Actions", Zap], meetings: ["Upcoming Meetings", CalendarClock], reminders: ["Personal Reminders", StickyNote] };
+const WIDGETS = { stats: ["Statistik Bulan Ini", BarChart3], today: ["Today's Tasks", CheckSquare], deadlines: ["Upcoming Deadlines", Clock], projects: ["My Projects", FolderKanban], conversations: ["Recent Conversations", MessageCircle], completed: ["Recently Completed", CheckCircle2], activity: ["Team Activity", Activity], quick: ["Quick Actions", Zap], meetings: ["Upcoming Meetings", CalendarClock], reminders: ["Personal Reminders", StickyNote] };
 const DEFAULT_ORDER = Object.keys(WIDGETS);
 
 function Widget({ id, children, wide }) {
   const [title, Icon] = WIDGETS[id];
   return (
-    <section className={`card p-5 animate-rise ${wide ? "md:col-span-2" : ""}`} data-testid={`widget-${id}`}>
+    <section className={`card p-5 animate-rise ${wide ? "md:col-span-2 xl:col-span-3" : ""}`} data-testid={`widget-${id}`}>
       <h3 className="mb-3 flex items-center gap-2 text-sm font-bold"><span className="flex h-7 w-7 items-center justify-center rounded-lg tint-accent"><Icon size={14} /></span>{title}</h3>
       {children}
     </section>
@@ -80,7 +81,7 @@ export default function Dashboard() {
   useEffect(() => { load().catch(() => {}); }, []); // eslint-disable-line
   const dash = prefs.dashboard || {};
   const baseOrder = dash.order || DEFAULT_ORDER;
-  const order = [...new Set([...baseOrder.filter((k) => WIDGETS[k]), ...DEFAULT_ORDER.filter((k) => !baseOrder.includes(k))])];
+  const order = [...new Set([...DEFAULT_ORDER.filter((k) => !baseOrder.includes(k)), ...baseOrder.filter((k) => WIDGETS[k])])];
   const hidden = dash.hidden || [];
   const move = (k, dir) => { const o = [...order]; const i = o.indexOf(k); const j = i + dir; if (j < 0 || j >= o.length) return; [o[i], o[j]] = [o[j], o[i]]; savePrefs({ dashboard: { ...dash, order: o } }); };
   const toggle = (k) => savePrefs({ dashboard: { ...dash, hidden: hidden.includes(k) ? hidden.filter((x) => x !== k) : [...hidden, k] } });
@@ -94,6 +95,7 @@ export default function Dashboard() {
     const today = open.filter((t) => t.assignee_id === me.user_id && t.deadline && new Date(t.deadline).toDateString() === new Date().toDateString());
     const todayList = today.length ? today : open.filter((t) => t.assignee_id === me.user_id).slice(0, 5);
     switch (k) {
+      case "stats": return <Widget id={k} wide><MonthlyStats /></Widget>;
       case "today": return <Widget id={k}>{todayList.length ? todayList.map((t) => <TaskRow key={t.id} t={t} />) : <p className="text-sm text-sub">No tasks for today. Enjoy the calm.</p>}</Widget>;
       case "deadlines": { const up = open.filter((t) => t.deadline).sort((a, b) => a.deadline.localeCompare(b.deadline)).slice(0, 6); return <Widget id={k}>{up.length ? up.map((t) => <TaskRow key={t.id} t={t} />) : <p className="text-sm text-sub">No upcoming deadlines.</p>}</Widget>; }
       case "projects": return <Widget id={k}>{data.projects.length ? data.projects.map((p) => (

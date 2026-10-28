@@ -44,8 +44,8 @@ export function NotificationList({ onNavigate }) {
 export function NotificationRail({ open, setOpen }) {
   const { unread } = useApp();
   return (
-    <aside className="sticky top-0 hidden h-screen shrink-0 md:flex" data-testid="notification-rail">
-      {open && <div className="fixed right-[60px] top-0 z-40 h-screen w-[360px] border-l bg-surface shadow-2xl animate-rise"><NotificationList onNavigate={() => setOpen(false)} /></div>}
+    <aside className="sticky top-0 z-30 hidden h-screen shrink-0 md:flex" data-testid="notification-rail">
+      {open && <div className="h-screen w-[320px] border-l bg-surface xl:w-[360px]" data-testid="notification-panel"><NotificationList onNavigate={() => setOpen(false)} /></div>}
       <div className="flex w-[60px] flex-col items-center border-l bg-sidebar pt-4">
         <button onClick={() => setOpen(!open)} className={`relative flex h-11 w-11 items-center justify-center rounded-2xl ${open ? "tint-accent" : "hover:bg-surface2 text-sub"}`} aria-label="Notifikasi" data-testid="notification-rail-btn">
           <Bell size={20} className={unread > 0 && !open ? "animate-[float_1.2s_ease-in-out_infinite] text-brand" : ""} />

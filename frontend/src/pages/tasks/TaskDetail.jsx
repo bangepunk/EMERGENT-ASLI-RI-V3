@@ -7,7 +7,7 @@ import { useApp } from "../../context/AppContext";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "../../components/ui/sheet";
 import { Avatar, Spinner, fmtDate, rel, dueInfo } from "../../components/common";
 import RichEditor, { RichView } from "../../components/RichEditor";
-import { inp, UserSelect, PrioritySelect, LabelPicker, ColorPicker, AttachmentList, useUploader, ListEditor } from "./fields";
+import { inp, UserSelect, PrioritySelect, LabelPicker, ItemPicker, ColorPicker, AttachmentList, useUploader, ListEditor } from "./fields";
 import { toDeadline } from "./TaskCreate";
 
 function Row({ label, children }) {
@@ -80,6 +80,9 @@ export default function TaskDetail({ id, onClose, onChanged }) {
                 <Row label="Deadline"><div className="flex items-center gap-2"><input type="datetime-local" disabled={ro} defaultValue={t.deadline ? fmtDate(t.deadline, "yyyy-MM-dd'T'HH:mm") : ""} key={t.deadline} onBlur={(e) => { const v = e.target.value ? new Date(e.target.value).toISOString() : null; if (v !== t.deadline) patch({ deadline: v }); }} className={inp} data-testid="task-detail-deadline" />{d && <span className={`whitespace-nowrap text-xs ${d.cls}`}>{d.state === "overdue" ? "Overdue" : d.state === "today" ? "Due today" : ""}</span>}</div></Row>
                 <Row label="Start date"><input type="date" disabled={ro} defaultValue={t.start_date || ""} key={`s${t.start_date}`} onBlur={(e) => e.target.value !== (t.start_date || "") && patch({ start_date: e.target.value || null })} className={inp} /></Row>
                 <Row label="IP / Brand"><LabelPicker value={t.label_ids} onChange={(v) => patch({ label_ids: v })} testid="task-detail-labels" /></Row>
+                <Row label="Item"><ItemPicker value={t.item_type} onChange={(v) => patch({ item_type: v })} testid="task-detail-item" /></Row>
+                <Row label="Link file/folder"><input disabled={ro} defaultValue={t.link_url || ""} key={`l${t.link_url}`} onBlur={(e) => e.target.value.trim() !== (t.link_url || "") && patch({ link_url: e.target.value.trim() })} placeholder="https://…" className={inp} data-testid="task-detail-link" /></Row>
+                <Row label="Submit date"><input type="date" disabled={ro} defaultValue={t.submit_date || ""} key={`sd${t.submit_date}`} onChange={(e) => e.target.value !== (t.submit_date || "") && patch({ submit_date: e.target.value || null })} className={inp} data-testid="task-detail-submit-date" /></Row>
                 <Row label="Project"><select value={t.project_id || ""} disabled={ro} onChange={(e) => patch({ project_id: e.target.value || null })} className={inp}><option value="">No project</option>{projects.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}</select></Row>
                 <Row label="Department"><input defaultValue={t.department || ""} disabled={ro} onBlur={(e) => e.target.value !== (t.department || "") && patch({ department: e.target.value })} className={inp} /></Row>
                 <Row label="Card color"><ColorPicker value={t.card_color} onChange={(v) => patch({ card_color: v })} style={t.card_style} onStyle={(v) => patch({ card_style: v })} /></Row>

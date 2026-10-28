@@ -121,7 +121,7 @@ NOTIF_CATEGORY = {"dm": "messages", "group_message": "messages", "mention": "men
                   "missed_call": "calls", "task_assigned": "tasks", "task_reassigned": "tasks",
                   "deadline_changed": "tasks", "deadline_upcoming": "deadlines", "overdue": "deadlines",
                   "task_completed": "tasks", "task_review": "tasks", "poll": "polls", "group_invite": "groups",
-                  "org_change": "org", "project": "tasks"}
+                  "org_change": "org", "project": "tasks", "post_reply": "beranda", "post_like": "beranda", "post_mention": "beranda"}
 
 
 async def notify(ws_id, user_ids, ntype, title, body="", link="", actor_id=None, conv_id=None):

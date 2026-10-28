@@ -5,9 +5,9 @@ import { api, errMsg } from "../../lib/api";
 import { useApp } from "../../context/AppContext";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "../../components/ui/sheet";
 import RichEditor from "../../components/RichEditor";
-import { inp, UserSelect, PrioritySelect, LabelPicker, ColorPicker, AttachmentList, useUploader, ListEditor } from "./fields";
+import { inp, UserSelect, PrioritySelect, LabelPicker, ItemPicker, ColorPicker, AttachmentList, useUploader, ListEditor } from "./fields";
 
-const blank = (me, d = {}) => ({ title: "", description: "", assignee_id: null, priority: "medium", deadline_date: "", deadline_time: "", start_date: "", project_id: d.project_id || "", department: me.department || "", label_ids: d.label_ids || [], collaborator_ids: [], checklist: [], subtasks: [], links: [], attachments: [], estimate: "", card_color: null, card_style: "accent", custom: {}, status: d.status });
+const blank = (me, d = {}) => ({ title: "", description: "", assignee_id: null, priority: "medium", deadline_date: "", deadline_time: "", start_date: "", project_id: d.project_id || "", department: me.department || "", label_ids: d.label_ids || [], item_type: null, link_url: "", collaborator_ids: [], checklist: [], subtasks: [], links: [], attachments: [], estimate: "", card_color: null, card_style: "accent", custom: {}, status: d.status });
 
 function Row({ label, children }) {
   return <div className="grid items-start gap-1 sm:grid-cols-[130px_1fr] sm:gap-3"><span className="pt-2.5 text-xs font-semibold text-sub">{label}</span><div className="min-w-0">{children}</div></div>;
@@ -55,6 +55,8 @@ export default function TaskCreate({ open, onOpenChange, preset, defaults, onCre
             <Row label="Priority"><PrioritySelect value={f.priority} onChange={set("priority")} testid="task-priority-select" /></Row>
             <Row label="Deadline"><div className="flex gap-2"><input type="date" value={f.deadline_date} onChange={set("deadline_date")} className={inp} data-testid="task-deadline-input" /><input type="time" value={f.deadline_time} onChange={set("deadline_time")} className={`${inp} w-32`} data-testid="task-deadline-time-input" /></div></Row>
             <Row label="IP / Brand"><LabelPicker value={f.label_ids} onChange={set("label_ids")} testid="task-label-picker" /></Row>
+            <Row label="Item"><ItemPicker value={f.item_type} onChange={set("item_type")} testid="task-item-picker" /></Row>
+            <Row label="Link file/folder"><input value={f.link_url} onChange={set("link_url")} placeholder="https://…" className={inp} data-testid="task-link-input" /></Row>
             <Row label="Attachments"><div className="space-y-2"><AttachmentList items={f.attachments} onRemove={(a) => setAtt((x) => x.filter((y) => y.id !== a.id))} /><button type="button" onClick={pick} className="flex items-center gap-1.5 text-sm font-semibold text-brand" data-testid="task-add-attachment-btn"><Paperclip size={14} />Add images or documents</button>{input}</div></Row>
             {!more ? <button type="button" onClick={() => setMore(true)} className="text-sm font-semibold text-sub hover:text-ink" data-testid="task-more-fields-btn">+ More fields (dates, project, checklist, links…)</button> : <>
               <Row label="Start date"><input type="date" value={f.start_date} onChange={set("start_date")} className={inp} data-testid="task-start-input" /></Row>

@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
-import { Home, MessageCircle, Hash, Users, Network, CheckSquare, FolderKanban, Bell, Settings, Search, Moon, Sun, LogOut, Menu, ChevronsLeft, ChevronsRight, FlaskConical } from "lucide-react";
+import { Home, MessageCircle, Hash, Users, Network, CheckSquare, FolderKanban, Bell, Settings, Search, Moon, Sun, LogOut, Menu, ChevronsLeft, ChevronsRight, FlaskConical, Newspaper } from "lucide-react";
 import { useApp } from "../context/AppContext";
 import { Avatar, Logo, ROLE_NAMES } from "./common";
 import { CallProvider } from "./CallLayer";
@@ -10,6 +10,7 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle } from "./ui/sheet";
 
 const NAV = [
   { to: "/", icon: Home, label: "Home", id: "home" },
+  { to: "/beranda", icon: Newspaper, label: "Beranda", id: "beranda" },
   { to: "/messages", icon: MessageCircle, label: "Messages", id: "messages" },
   { to: "/groups", icon: Hash, label: "Groups", id: "groups" },
   { to: "/people", icon: Users, label: "Directory", id: "directory" },
@@ -18,7 +19,7 @@ const NAV = [
   { to: "/projects", icon: FolderKanban, label: "Projects", id: "projects" },
   { to: "/settings", icon: Settings, label: "Settings", id: "settings" },
 ];
-const MOBILE = ["home", "messages", "tasks", "directory"];
+const MOBILE = ["home", "beranda", "messages", "tasks"];
 
 function NavItem({ item, compact, unread, onClick }) {
   const Icon = item.icon;

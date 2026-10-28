@@ -5,6 +5,7 @@ import { useApp } from "../../context/AppContext";
 import { api, errMsg, uploadFile } from "../../lib/api";
 import { Avatar, LabelChip, ROLE_NAMES, rel, Logo } from "../../components/common";
 import { Switch } from "../../components/ui/switch";
+import { ItemChip } from "../tasks/fields";
 
 const inp = "h-10 rounded-xl border bg-surface2 px-3 text-sm outline-none";
 const run = async (fn, msg) => { try { await fn(); if (msg) toast.success(msg); return true; } catch (e) { toast.error(errMsg(e)); return false; } };
@@ -86,6 +87,26 @@ export function DivisionsAdmin() {
     <Card title="Daftar divisi (form profil karyawan baru)" testid="divisions-admin">
       <div className="flex gap-2"><input value={n} onChange={(e) => setN(e.target.value)} onKeyDown={(e) => e.key === "Enter" && add()} placeholder="Nama divisi" className={`${inp} flex-1`} data-testid="division-name-input" /><button onClick={add} className="btn-accent h-10 px-4 text-sm font-semibold" data-testid="division-add-btn"><Plus size={14} /></button></div>
       <div className="mt-3 flex flex-wrap gap-2">{list.map((d) => <span key={d} className="flex items-center gap-1.5 rounded-full bg-surface2 px-3 py-1.5 text-sm" data-testid={`division-item-${d.replace(/\s/g, "-")}`}>{d}<button onClick={() => save(list.filter((x) => x !== d))} className="text-sub hover:text-rose-500" aria-label={`Hapus ${d}`} data-testid={`division-remove-${d.replace(/\s/g, "-")}`}><Trash2 size={12} /></button></span>)}{!list.length && <span className="text-sm text-sub">Belum ada divisi.</span>}</div>
+    </Card>
+  );
+}
+
+export function ItemTypesAdmin() {
+  const { ws, reloadWs } = useApp();
+  const [n, setN] = useState("");
+  const list = ws.item_types || [];
+  const save = (l, msg) => run(() => api.patch("/workspace", { item_types: l }), msg).then(reloadWs);
+  const add = () => n.trim() && run(() => api.post("/item-types", { name: n.trim() }), "Item ditambahkan").then(() => { setN(""); reloadWs(); });
+  return (
+    <Card title="Jenis item task (kolom Item)" testid="item-types-admin">
+      <p className="mb-3 text-xs text-sub">Semua orang bisa menambah item baru dari tabel task. Di sini admin bisa mengubah warna atau menghapusnya.</p>
+      <div className="flex gap-2"><input value={n} onChange={(e) => setN(e.target.value)} onKeyDown={(e) => e.key === "Enter" && add()} placeholder="Nama item" className={`${inp} flex-1`} data-testid="item-type-name-input" /><button onClick={add} className="btn-accent h-10 px-4 text-sm font-semibold" data-testid="item-type-add-btn"><Plus size={14} /></button></div>
+      <div className="mt-3 divide-y">{list.map((it, i) => (
+        <div key={it.name} className="flex items-center gap-3 py-2" data-testid={`item-type-row-${it.name.replace(/\s/g, "-")}`}>
+          <input type="color" value={it.color} onChange={(e) => save(list.map((x, j) => (j === i ? { ...x, color: e.target.value } : x)))} className="h-8 w-8" aria-label="Warna item" />
+          <span className="flex-1"><ItemChip name={it.name} /></span>
+          <button onClick={() => save(list.filter((_, j) => j !== i), "Item dihapus")} className="text-sub hover:text-rose-500" aria-label={`Hapus ${it.name}`} data-testid={`item-type-remove-${it.name.replace(/\s/g, "-")}`}><Trash2 size={14} /></button>
+        </div>))}</div>
     </Card>
   );
 }

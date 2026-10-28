@@ -6,8 +6,8 @@ from core import db, now_iso, new_id, get_user, is_admin, require_admin, notify,
 
 router = APIRouter(prefix="/api")
 P = {"_id": 0}
-PREF_KEYS = {"theme_mode", "theme", "background", "dashboard", "notifications", "task_columns", "task_card_style", "push_enabled", "task_view"}
-WS_KEYS = {"name", "tagline", "description", "logo_file_id", "theme", "allowed_domains", "auto_join_domain", "require_approval", "org_levels", "divisions"}
+PREF_KEYS = {"theme_mode", "theme", "background", "dashboard", "notifications", "task_columns", "task_card_style", "push_enabled", "task_view", "task_sheet"}
+WS_KEYS = {"name", "tagline", "description", "logo_file_id", "theme", "allowed_domains", "auto_join_domain", "require_approval", "org_levels", "divisions", "item_types"}
 MAX_SIZE = 15 * 1024 * 1024
 ALLOWED = {"image/png", "image/jpeg", "image/gif", "image/webp", "application/pdf", "text/plain", "text/csv",
            "application/msword", "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
@@ -55,6 +55,14 @@ async def update_ws(body: dict = Body(...), u=Depends(get_user)):
         upd["allowed_domains"] = [d.strip().lower().lstrip("@") for d in upd["allowed_domains"] if d.strip()]
     if "divisions" in upd:
         upd["divisions"] = list(dict.fromkeys(str(d).strip()[:60] for d in upd["divisions"] if str(d).strip()))
+    if "item_types" in upd:
+        seen, items = set(), []
+        for i in upd["item_types"]:
+            nm = str(i.get("name") or "").strip()[:60]
+            if nm and nm.lower() not in seen:
+                seen.add(nm.lower())
+                items.append({"name": nm, "color": str(i.get("color") or "#94A3B8")[:9]})
+        upd["item_types"] = items
     if "brand_name" in body:
         upd["brand_name"] = body["brand_name"]
     await db.workspaces.update_one({"id": u["workspace_id"]}, {"$set": upd})

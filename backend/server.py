@@ -7,18 +7,19 @@ import os  # noqa: E402
 import logging  # noqa: E402
 from fastapi import FastAPI  # noqa: E402
 from starlette.middleware.cors import CORSMiddleware  # noqa: E402
-from core import client, init_storage  # noqa: E402
+from core import client, db, init_storage  # noqa: E402
 import routes_auth  # noqa: E402
 import routes_people  # noqa: E402
 import routes_chat  # noqa: E402
 import routes_tasks  # noqa: E402
 import routes_misc  # noqa: E402
+import routes_feed  # noqa: E402
 from seed import seed_all  # noqa: E402
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("circle")
 app = FastAPI(title="CIRCLE")
-for r in (routes_auth, routes_people, routes_chat, routes_tasks, routes_misc):
+for r in (routes_auth, routes_people, routes_chat, routes_tasks, routes_misc, routes_feed):
     app.include_router(r.router)
 
 origins = os.environ.get("CORS_ORIGINS", "").split(",")
@@ -34,6 +35,7 @@ async def health():
 @app.on_event("startup")
 async def startup():
     await seed_all()
+    await db.workspaces.update_many({"item_types": {"$exists": False}}, {"$set": {"item_types": routes_tasks.DEFAULT_ITEMS}})
     try:
         init_storage()
         logger.info("Storage initialized")

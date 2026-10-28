@@ -17,6 +17,7 @@ import Projects from "./pages/Projects";
 import { NotificationList } from "./components/NotificationPanel";
 import Settings from "./pages/Settings";
 import Onboarding from "./pages/Onboarding";
+import Beranda from "./pages/Beranda";
 
 function AuthCallback() {
   const done = useRef(false);
@@ -50,6 +51,8 @@ function Router() {
       <Route path="/login" element={<Login />} />
       <Route element={<Protected><Shell /></Protected>}>
         <Route path="/" element={<Dashboard />} />
+        <Route path="/beranda" element={<Beranda />} />
+        <Route path="/beranda/:pid" element={<Beranda />} />
         <Route path="/messages" element={<Messages />} />
         <Route path="/messages/:cid" element={<Messages />} />
         <Route path="/groups" element={<Groups />} />
@@ -73,7 +76,7 @@ export default function App() {
       <BrowserRouter>
         <Router />
       </BrowserRouter>
-      <Toaster position="top-right" richColors closeButton />
+      <Toaster position="top-center" richColors closeButton />
     </AppProvider>
   );
 }

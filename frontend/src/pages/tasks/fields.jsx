@@ -49,6 +49,38 @@ export function LabelPicker({ value = [], onChange, testid = "label-picker" }) {
   );
 }
 
+export const itemStyle = (c) => ({ background: `${c}38`, color: "#1F2937", border: `1px solid ${c}90` });
+
+export function ItemChip({ name, small }) {
+  const { ws } = useApp();
+  if (!name) return null;
+  const it = (ws.item_types || []).find((i) => i.name === name);
+  return <span className={`inline-flex max-w-full items-center truncate whitespace-nowrap rounded-full font-medium ${small ? "px-2 py-0.5 text-[11px]" : "px-2.5 py-0.5 text-xs"}`} style={itemStyle(it?.color || "#94A3B8")} data-testid="item-chip">{name}</span>;
+}
+
+export function ItemPicker({ value, onChange, testid = "item-picker", trigger }) {
+  const { ws, reloadWs } = useApp();
+  const [open, setOpen] = useState(false);
+  const [q, setQ] = useState("");
+  const all = ws.item_types || [];
+  const list = all.filter((i) => i.name.toLowerCase().includes(q.trim().toLowerCase()));
+  const exact = all.find((i) => i.name.toLowerCase() === q.trim().toLowerCase());
+  const pick = (n) => { onChange(n); setOpen(false); setQ(""); };
+  const create = async () => { try { await api.post("/item-types", { name: q.trim() }); await reloadWs(); pick(q.trim()); } catch (e) { toast.error(errMsg(e)); } };
+  const onKey = (e) => { if (e.key !== "Enter") return; e.preventDefault(); if (exact) pick(exact.name); else if (q.trim()) create(); else if (list[0]) pick(list[0].name); };
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>{trigger || <button type="button" className={`${inp} flex items-center text-left`} data-testid={testid}>{value ? <ItemChip name={value} /> : <span className="text-sub">Pilih item</span>}</button>}</PopoverTrigger>
+      <PopoverContent className="w-64 bg-surface p-2" align="start">
+        <input autoFocus value={q} onChange={(e) => setQ(e.target.value)} onKeyDown={onKey} placeholder="Cari atau ketik item baru" className="h-9 w-full rounded-lg border bg-surface2 px-2 text-sm outline-none" data-testid={`${testid}-search`} />
+        <div className="mt-2 max-h-60 space-y-0.5 overflow-y-auto">{list.map((i) => <button key={i.name} type="button" onClick={() => pick(i.name)} className={`block w-full rounded-lg px-1.5 py-1 text-left hover:bg-surface2 ${value === i.name ? "bg-surface2" : ""}`} data-testid={`${testid}-option-${i.name.replace(/\s/g, "-")}`}><ItemChip name={i.name} /></button>)}</div>
+        {q.trim() && !exact && <button type="button" onClick={create} className="mt-1 flex w-full items-center gap-1.5 rounded-lg px-2 py-1.5 text-left text-xs font-semibold text-brand hover:bg-surface2" data-testid={`${testid}-create`}><Plus size={13} />Tambah "{q.trim()}"</button>}
+        {value && <button type="button" onClick={() => pick(null)} className="mt-1 w-full rounded-lg py-1 text-xs text-sub hover:bg-surface2" data-testid={`${testid}-clear`}>Kosongkan</button>}
+      </PopoverContent>
+    </Popover>
+  );
+}
+
 export function ColorPicker({ value, onChange, style, onStyle }) {
   return (
     <div className="flex flex-wrap items-center gap-1.5" data-testid="card-color-picker">
