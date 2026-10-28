@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Trash2, Plus, ArrowUp, ArrowDown } from "lucide-react";
 import { toast } from "sonner";
 import { useApp } from "../../context/AppContext";
@@ -91,6 +91,14 @@ export function DivisionsAdmin() {
   );
 }
 
+function ColorSwatch({ value, onSave, testid }) {
+  const [c, setC] = useState(value);
+  const timer = useRef(null);
+  useEffect(() => { setC(value); }, [value]);
+  const change = (v) => { setC(v); clearTimeout(timer.current); timer.current = setTimeout(() => v.toLowerCase() !== value.toLowerCase() && onSave(v), 600); };
+  return <input type="color" value={c} onChange={(e) => change(e.target.value)} className="h-8 w-8" aria-label="Warna item" data-testid={testid} />;
+}
+
 export function ItemTypesAdmin() {
   const { ws, reloadWs } = useApp();
   const [n, setN] = useState("");
@@ -103,7 +111,7 @@ export function ItemTypesAdmin() {
       <div className="flex gap-2"><input value={n} onChange={(e) => setN(e.target.value)} onKeyDown={(e) => e.key === "Enter" && add()} placeholder="Nama item" className={`${inp} flex-1`} data-testid="item-type-name-input" /><button onClick={add} className="btn-accent h-10 px-4 text-sm font-semibold" data-testid="item-type-add-btn"><Plus size={14} /></button></div>
       <div className="mt-3 divide-y">{list.map((it, i) => (
         <div key={it.name} className="flex items-center gap-3 py-2" data-testid={`item-type-row-${it.name.replace(/\s/g, "-")}`}>
-          <input type="color" value={it.color} onChange={(e) => save(list.map((x, j) => (j === i ? { ...x, color: e.target.value } : x)))} className="h-8 w-8" aria-label="Warna item" />
+          <ColorSwatch value={it.color} onSave={(c) => save(list.map((x, j) => (j === i ? { ...x, color: c } : x)), "Warna disimpan")} testid={`item-type-color-${it.name.replace(/\s/g, "-")}`} />
           <span className="flex-1"><ItemChip name={it.name} /></span>
           <button onClick={() => save(list.filter((_, j) => j !== i), "Item dihapus")} className="text-sub hover:text-rose-500" aria-label={`Hapus ${it.name}`} data-testid={`item-type-remove-${it.name.replace(/\s/g, "-")}`}><Trash2 size={14} /></button>
         </div>))}</div>

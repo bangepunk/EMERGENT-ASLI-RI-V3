@@ -1,6 +1,7 @@
 import csv
 import io
 import json
+import re
 from datetime import datetime, timezone, timedelta
 from fastapi import APIRouter, HTTPException, Depends, Body, Request, Query
 from fastapi.responses import Response
@@ -298,9 +299,10 @@ async def add_item_type(body: dict = Body(...), u=Depends(get_user)):
     ws = await db.workspaces.find_one({"id": u["workspace_id"]}, {"item_types": 1})
     items = ws.get("item_types") or []
     if not any(i["name"].lower() == name.lower() for i in items):
-        items.append({"name": name, "color": ITEM_COLORS[len(items) % len(ITEM_COLORS)]})
-        await db.workspaces.update_one({"id": u["workspace_id"]}, {"$set": {"item_types": items}})
-    return items
+        rx = {"$regex": f"^{re.escape(name)}$", "$options": "i"}
+        await db.workspaces.update_one({"id": u["workspace_id"], "item_types.name": {"$not": rx}},
+                                       {"$push": {"item_types": {"name": name, "color": ITEM_COLORS[len(items) % len(ITEM_COLORS)]}}})
+    return (await db.workspaces.find_one({"id": u["workspace_id"]}, {"item_types": 1})).get("item_types", [])
 
 
 @router.get("/stats/monthly")

@@ -1,0 +1,43 @@
+{
+  "summary": "Iteration 2: tested the notification-panel overlap fix, the spreadsheet Task List, item types (Settings and inline create), the Dashboard 'Statistik Bulan Ini' widget and the Beranda forum. Backend pytest: 8/8 passed (sheet fields, item-type RBAC, monthly stats RBAC, posts like/react/reply/delete/notifications/image-only attachments). UI checks done with Playwright at 1440, 1920 and 390. Overlap bug is FIXED: the panel is docked, main content shrinks 1380->1020 at 1440 and 1860->1500 at 1920, and no element covers the panel on Home/Tasks/Beranda/Messages. Close button works. On mobile the bell goes to /notifications with no overlap with header or bottom nav. All inline sheet edits persist after reload, and a non-admin employee can create a new item type inline. Add row, hover checkbox to bulk bar, open-task detail Item/Link/Submit date and the New Task dialog Item/Link all work. Stats RBAC is correct in both UI and API. Beranda post/mention/photo/like/react/reply/thread/back/delete, live websocket update and mention notification -> thread navigation all work. 1 functional bug: item-type color change in Settings does not persist.",
+  "backend_issues": {
+    "critical": [],
+    "minor": [
+      {"endpoint": "POST /api/item-types", "issue": "Read-modify-write of workspace.item_types (find then $set whole array). Two people adding items at the same time can lose one of them. Use $push with a guard, or an atomic update."},
+      {"endpoint": "POST /api/posts/{id}/like", "issue": "Each like (re-like after unlike) sends a new post_like notification, so toggling spams the author. The notification is not removed on unlike."},
+      {"endpoint": "GET /api/stats/monthly", "issue": "Tasks without an assignee are always excluded (assignee_id $ne None). This is by design, but note that a task created from the New Task dialog without an assignee never appears in stats."}
+    ]
+  },
+  "frontend_issues": {
+    "ui_bugs": [
+      {"component": "Settings > Workspace > ItemTypesAdmin color input", "issue": "Color change does NOT persist. The <input type=color> is controlled (value=it.color) and onChange calls save() straight away. The 'input' event PATCHes the new color, then React snaps the DOM value back to the old color, and the following 'change' event PATCHes the OLD color, which wins. Network capture showed 2 PATCHes: first color '#123456', second color '#a78bfa'; after reload the color is the default. A real native picker also PATCHes on every drag tick.", "selector": "[data-testid^=item-type-row-] input[type=color]", "priority": "HIGH"}
+    ],
+    "integration_issues": [],
+    "design_issues": [
+      {"screen": "Tasks list sheet @1440", "issues": ["Submit Date / Deadline native date inputs are cut off ('10/15/20…'). Owner pills ('Bank A…') and Status pills ('In Progr…') are truncated.", "With the notification panel open (main ~770px) the sheet is very cramped: headers 'Ow…', 'Su…', 'De…' and dates show only 'mm/'. Consider a min-width plus horizontal scroll when the panel is open, or a shorter date format.", "Uses the browser's native date picker instead of the shadcn Calendar/Popover."]},
+      {"screen": "Beranda post card", "issue_note": "", "issues": ["A single small attached image is stretched to full card width (w-full object-cover), so small images look pixelated and blown up. Consider max-w or object-contain for small images.", "Reaction pill renders '🎉1' with no gap between the emoji and the count."]},
+      {"screen": "Dashboard widget-stats", "issues": ["The title stays 'Statistik Bulan Ini' even when you navigate to another month."]},
+      {"screen": "Tasks list mobile", "issues": ["The 'Columns' button still shows on mobile, but the card layout ignores column config."]}
+    ]
+  },
+  "test_report_links": ["/app/backend/tests/test_iter2_sheet_stats_feed.py", "/app/test_reports/pytest/pytest_iter2.xml"],
+  "action_items": [
+    "Fix ItemTypesAdmin color input: keep local state and save once (onBlur or a debounced save), or make it uncontrolled with defaultValue plus key, so the second 'change' event can't send the old color.",
+    "Improve the sheet layout at 1440 when the notification panel is open (dates, Owner and Status truncated). Consider a min table width with overflow-x scroll inside the sheet, or compact date display.",
+    "Optional: make the POST /api/item-types update atomic; avoid duplicate post_like notifications on re-like; give the ItemPicker a disabled/read-only state in TaskDetail when !can_edit (currently it stays clickable and only the backend 403 stops it)."
+  ],
+  "critical_code_review_comments": [
+    "ItemTypesAdmin: controlled color input with an immediate PATCH on every onChange causes request spam and a lost update (confirmed bug above).",
+    "TaskDetail: Item picker, Labels, Reviewer and Card color have no read-only (disabled) handling when ro=true, unlike the other fields. Non-editors get an error toast instead of disabled controls.",
+    "ListView: sheet cells are editable for all rows even when the user can't edit the task; they rely on the backend 403 toast.",
+    "Beranda Composer: the mention regex @([\\w]*)$ means suggestions close after a space, so you can't filter by last name (e.g. '@Test Ad'). This is OK for picking but limits search.",
+    "routes_feed.get_post: the replies query does not filter by workspace_id. It is safe because the parent is workspace-checked, but it would be more consistent to add it."
+  ],
+  "updated_files": ["/app/backend/tests/test_iter2_sheet_stats_feed.py"],
+  "success_rate": {"backend": "100% (8/8)", "frontend": "~95% (all requested flows pass; 1 bug in Settings item-type color)"},
+  "seed_data_creation": "All created data used the TEST_ prefix and was cleaned up: tasks archived, posts soft-deleted, TEST item types removed. While cleaning I accidentally deleted E1's post 'TEST_ halo' (post_cd077ed62180, author test_admin_1, liked by a real user) and restored it in the DB (deleted=False). Notifications created by the tests remain for test_admin_1 and test_emp_1.",
+  "retest_needed": false,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "Run `cd /app/backend && python -m pytest tests/test_iter2_sheet_stats_feed.py -n 0`. Upload endpoint is POST /api/upload (not /api/files). The browser_automation tool rewrites screenshot paths, so use plain filenames like 'x.jpg'. Container clock is Oct 2026. Real tasks (vxvcf, gfxfgxfg, heiii, WDQWD, HGFHGFHG) and real posts exist; don't touch them. To retest the color bug, capture PATCH /api/workspace request bodies while changing [data-testid=item-type-row-<Name>] input[type=color].",
+  "rca of the issue": "Item-type color revert: in AdminPanels.jsx ItemTypesAdmin, <input type=color value={it.color} onChange={save(...)}>. React fires onChange for both the 'input' and 'change' DOM events of a color input. After the first event, the controlled value re-renders to the old ws color (reloadWs hasn't finished), so the DOM value goes back. The final 'change' event then reads the old value and PATCHes it, overwriting the new color. Repro: Settings > Workspace > change any item color, reload, and the color is unchanged. Fix: use local state plus onBlur/debounced save, or an uncontrolled input."
+}

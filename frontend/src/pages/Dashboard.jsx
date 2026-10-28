@@ -12,7 +12,7 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle } from "../components/ui/s
 import BackgroundEditor from "./settings/BackgroundEditor";
 import TaskCreate from "./tasks/TaskCreate";
 
-const WIDGETS = { stats: ["Statistik Bulan Ini", BarChart3], today: ["Today's Tasks", CheckSquare], deadlines: ["Upcoming Deadlines", Clock], projects: ["My Projects", FolderKanban], conversations: ["Recent Conversations", MessageCircle], completed: ["Recently Completed", CheckCircle2], activity: ["Team Activity", Activity], quick: ["Quick Actions", Zap], meetings: ["Upcoming Meetings", CalendarClock], reminders: ["Personal Reminders", StickyNote] };
+const WIDGETS = { stats: ["Statistik Bulanan", BarChart3], today: ["Today's Tasks", CheckSquare], deadlines: ["Upcoming Deadlines", Clock], projects: ["My Projects", FolderKanban], conversations: ["Recent Conversations", MessageCircle], completed: ["Recently Completed", CheckCircle2], activity: ["Team Activity", Activity], quick: ["Quick Actions", Zap], meetings: ["Upcoming Meetings", CalendarClock], reminders: ["Personal Reminders", StickyNote] };
 const DEFAULT_ORDER = Object.keys(WIDGETS);
 
 function Widget({ id, children, wide }) {

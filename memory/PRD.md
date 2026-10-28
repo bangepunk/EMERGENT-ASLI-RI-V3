@@ -35,6 +35,14 @@ Creative, marketing, product teams, management; workspace admins.
 - POST /api/me/onboarding; divisi stored as department (feeds Directory tabs); workspace.divisions managed in Settings → Workspace → Daftar divisi
 - Directory card shows nickname + company chip
 
+## Revisi 2 (2026-10-28)
+- Task List view = spreadsheet: Name, Owner (label pill), Item (colored item type), Link File/Folder, Title, Submit Date, Deadline, Status; inline edit, row numbers, add-row; prefs key task_sheet; default no grouping
+- Item types: workspace.item_types (seeded 5 defaults); anyone POST /api/item-types; admin edits color/removes in Settings → Workspace
+- Task fields item_type, link_url, submit_date (also in New Task, Task Detail, CSV export)
+- Dashboard widget "Statistik Bulanan" (GET /api/stats/monthly): employee own only, manager/admin all + per-employee filter
+- Beranda forum (/beranda, routes_feed.py): posts, photos, @mention, like, emoji reactions, replies thread, delete (author/admin), live via websocket, notifications category "beranda"
+- Notification panel docked in layout (no overlap); toasts moved to top-center
+
 ## Backlog
 - P1: shadcn date pickers instead of native inputs; TURN server for calls behind strict NATs; true browser push (service worker) when tab closed; link previews for URLs.
 - P2: drag reorder of org units among siblings (API exists), message threads view, sticker pack management UI per pack, larger-group calls via SFU.

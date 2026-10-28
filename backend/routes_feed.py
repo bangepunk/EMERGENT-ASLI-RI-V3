@@ -78,7 +78,7 @@ async def like_post(pid: str, u=Depends(get_user)):
     p = await load(pid, u)
     liked = u["user_id"] in (p.get("likes") or [])
     await db.posts.update_one({"id": pid}, {("$pull" if liked else "$addToSet"): {"likes": u["user_id"]}})
-    if not liked:
+    if not liked and not await db.notifications.find_one({"type": "post_like", "actor_id": u["user_id"], "link": thread_link(p), "body": p.get("text", "")[:200]}):
         await notify(u["workspace_id"], [p["author_id"]], "post_like", f"{u['name']} menyukai postinganmu", p.get("text", ""), thread_link(p), u["user_id"])
     await broadcast(u, pid)
     return shape(await load(pid, u), u)

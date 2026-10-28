@@ -8,7 +8,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "../../components/ui/pop
 import { TaskCard } from "./Board";
 import { ItemPicker, ItemChip } from "./fields";
 
-const COLS = [["assignee_id", "Name", 12], ["label_ids", "Owner", 10], ["item_type", "Item", 13], ["link_url", "Link File/Folder", 15], ["title", "Title", 22], ["submit_date", "Submit Date", 9], ["deadline", "Deadline", 9], ["status", "Status", 10], ["number", "ID", 5], ["priority", "Priority", 8], ["requestor_id", "Requestor", 10], ["project_id", "Project", 10], ["completed_at", "Completed", 9], ["updated_at", "Last updated", 9]];
+const COLS = [["assignee_id", "Name", 12], ["label_ids", "Owner", 10], ["item_type", "Item", 13], ["link_url", "Link File/Folder", 15], ["title", "Title", 18], ["submit_date", "Submit Date", 11], ["deadline", "Deadline", 11], ["status", "Status", 11], ["number", "ID", 5], ["priority", "Priority", 8], ["requestor_id", "Requestor", 10], ["project_id", "Project", 10], ["completed_at", "Completed", 9], ["updated_at", "Last updated", 9]];
 const DEFAULT_HIDDEN = ["number", "priority", "requestor_id", "project_id", "completed_at", "updated_at"];
 const ci = "h-8 w-full min-w-0 rounded-md bg-transparent px-1.5 text-xs outline-none hover:bg-surface2 focus:bg-surface focus:ring-2 focus:ring-[var(--c-accent)]";
 const pill = "h-7 w-full min-w-0 cursor-pointer truncate rounded-full px-2.5 text-xs font-medium outline-none";
@@ -117,7 +117,7 @@ export default function ListView({ tasks, projects, onOpen, selected, setSelecte
   };
   return (
     <div data-testid="task-list-view">
-      <div className="mb-3 flex justify-end gap-2"><ColumnMenu cols={cols} cfg={cfg} save={(c) => savePrefs({ task_sheet: c })} /></div>
+      <div className="mb-3 hidden justify-end gap-2 md:flex"><ColumnMenu cols={cols} cfg={cfg} save={(c) => savePrefs({ task_sheet: c })} /></div>
       {!tasks.length && <p className="mb-3 rounded-2xl border border-dashed p-6 text-center text-sm text-sub" data-testid="task-list-empty">No tasks match these filters.</p>}
       <div className="space-y-5">
         {groups.map(([key, name, color, items]) => {
