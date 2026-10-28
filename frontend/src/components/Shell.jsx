@@ -1,10 +1,11 @@
 import { useEffect, useState } from "react";
 import { NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
-import { Home, MessageCircle, Hash, Users, Network, CheckSquare, FolderKanban, BarChart3, Bell, Settings, Search, Moon, Sun, LogOut, Menu, ChevronsLeft, ChevronsRight, FlaskConical } from "lucide-react";
+import { Home, MessageCircle, Hash, Users, Network, CheckSquare, FolderKanban, Bell, Settings, Search, Moon, Sun, LogOut, Menu, ChevronsLeft, ChevronsRight, FlaskConical } from "lucide-react";
 import { useApp } from "../context/AppContext";
 import { Avatar, Logo, ROLE_NAMES } from "./common";
 import { CallProvider } from "./CallLayer";
 import SearchDialog from "./SearchDialog";
+import { NotificationRail } from "./NotificationPanel";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "./ui/sheet";
 
 const NAV = [
@@ -15,11 +16,9 @@ const NAV = [
   { to: "/org", icon: Network, label: "Organization", id: "org" },
   { to: "/tasks", icon: CheckSquare, label: "Tasks", id: "tasks" },
   { to: "/projects", icon: FolderKanban, label: "Projects", id: "projects" },
-  { to: "/polls", icon: BarChart3, label: "Polls", id: "polls" },
-  { to: "/notifications", icon: Bell, label: "Notifications", id: "notifications" },
   { to: "/settings", icon: Settings, label: "Settings", id: "settings" },
 ];
-const MOBILE = ["home", "messages", "tasks", "notifications"];
+const MOBILE = ["home", "messages", "tasks", "directory"];
 
 function NavItem({ item, compact, unread, onClick }) {
   const Icon = item.icon;
@@ -84,6 +83,7 @@ function MobileNav({ openSearch }) {
       <header className="md:hidden sticky top-0 z-40 flex h-14 items-center gap-2 border-b glass px-3 pt-safe" data-testid="mobile-header">
         <Logo size={30} ws={ws} />
         <span className="flex-1 font-extrabold tracking-tight">{ws?.brand_name || "CIRCLE"}{isDemo && <span className="ml-2 rounded-full bg-soft-yellow px-2 py-0.5 text-[10px] font-semibold text-amber-800">Demo</span>}</span>
+        <NavLink to="/notifications" className="btn-ghost relative flex h-11 w-11 items-center justify-center" aria-label="Notifikasi" data-testid="mobile-notifications-btn"><Bell size={20} />{unread > 0 && <span className="absolute right-1.5 top-1.5 min-w-[16px] rounded-full bg-brand px-1 text-center text-[9px] font-bold leading-4 text-white">{unread > 99 ? "99+" : unread}</span>}</NavLink>
         <button onClick={openSearch} className="btn-ghost flex h-11 w-11 items-center justify-center" aria-label="Search" data-testid="mobile-search-btn"><Search size={20} /></button>
       </header>
       <nav className="md:hidden fixed inset-x-0 bottom-0 z-40 grid grid-cols-5 border-t glass pb-safe" data-testid="mobile-bottom-nav">
@@ -116,6 +116,7 @@ function MobileNav({ openSearch }) {
 export default function Shell() {
   const { prefs } = useApp();
   const [search, setSearch] = useState(false);
+  const [notifOpen, setNotifOpen] = useState(false);
   const [compact, setCompactState] = useState(() => window.innerWidth < 1024 || !!prefs.sidebar_compact);
   const loc = useLocation();
   const chatOpen = /^\/messages\/.+/.test(loc.pathname);
@@ -140,6 +141,7 @@ export default function Shell() {
           {!chatOpen && <MobileNav openSearch={() => setSearch(true)} />}
           <main className={`min-w-0 flex-1 ${chatOpen ? "" : "pb-24 md:pb-0"}`}><Outlet /></main>
         </div>
+        <NotificationRail open={notifOpen} setOpen={setNotifOpen} />
       </div>
       <SearchDialog open={search} onOpenChange={setSearch} />
     </CallProvider>

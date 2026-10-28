@@ -22,6 +22,13 @@ Creative, marketing, product teams, management; workspace admins.
 - All modules above working end-to-end; testing iteration 1: backend 27/27, frontend ~95% of flows passed; tester-found bugs fixed (duplicate widgets, regex injection 500) plus follow-ups (scoped task broadcasts & online stats, archived excluded from search, full-name mentions, poll pluralization, conversation list refresh after rename, reaction menu closing, list empty state, reminder input layout).
 - Deadline reminders/overdue notifications are generated when the notifications list is fetched (no background scheduler).
 
+## Revisi 1 (2026-10-28)
+- Greeting box removed; Recent Conversations shows Personal + Groups sections
+- Task board fits width (no horizontal scroll), list table fixed-width with default hidden extra columns, saved views wrap
+- Notifications moved to dedicated right rail panel (desktop) / bell in mobile header; removed from sidebar
+- Polls tab removed; polls only creatable in group chats
+- Directory simplified: multi-select division tabs + name search
+
 ## Backlog
 - P1: shadcn date pickers instead of native inputs; TURN server for calls behind strict NATs; true browser push (service worker) when tab closed; link previews for URLs.
 - P2: drag reorder of org units among siblings (API exists), message threads view, sticker pack management UI per pack, larger-group calls via SFU.

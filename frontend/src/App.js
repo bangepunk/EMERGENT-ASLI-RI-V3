@@ -14,8 +14,7 @@ import Profile from "./pages/Profile";
 import Org from "./pages/Org";
 import Tasks from "./pages/Tasks";
 import Projects from "./pages/Projects";
-import Polls from "./pages/Polls";
-import Notifications from "./pages/Notifications";
+import { NotificationList } from "./components/NotificationPanel";
 import Settings from "./pages/Settings";
 
 function AuthCallback() {
@@ -58,8 +57,7 @@ function Router() {
         <Route path="/tasks" element={<Tasks />} />
         <Route path="/projects" element={<Projects />} />
         <Route path="/projects/:pid" element={<Projects />} />
-        <Route path="/polls" element={<Polls />} />
-        <Route path="/notifications" element={<Notifications />} />
+        <Route path="/notifications" element={<div className="h-[calc(100dvh-7.5rem)] bg-surface md:h-screen"><NotificationList /></div>} />
         <Route path="/settings" element={<Settings />} />
       </Route>
       <Route path="*" element={<Navigate to="/" replace />} />

@@ -8,6 +8,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "../../components/ui/pop
 import { TaskCard } from "./Board";
 
 const BASE_COLS = [["number", "ID"], ["title", "Task name"], ["description", "Description"], ["status", "Status"], ["requestor_id", "Requestor"], ["assignee_id", "Assignee"], ["priority", "Priority"], ["label_ids", "IP / Brand"], ["start_date", "Start"], ["deadline", "Deadline"], ["completed_at", "Completed"], ["attachments", "Files"], ["project_id", "Project"], ["department", "Department"], ["updated_at", "Last updated"]];
+const DEFAULT_HIDDEN = ["description", "start_date", "completed_at", "attachments", "updated_at", "department"];
 const strip = (h) => (h || "").replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim();
 
 function Cell({ k, t, projects, patch }) {
@@ -16,7 +17,7 @@ function Cell({ k, t, projects, patch }) {
   const done = statuses.find((s) => s.key === t.status)?.is_done;
   switch (k) {
     case "number": return <span className="text-xs text-sub">{t.number_str}</span>;
-    case "title": return <input defaultValue={t.title} key={t.updated_at} onBlur={(e) => e.target.value.trim() && e.target.value !== t.title && patch(t, { title: e.target.value })} className="h-8 w-full min-w-[200px] rounded-lg bg-transparent px-1 text-sm font-medium outline-none hover:bg-surface2 focus:bg-surface2" data-testid={`list-title-${t.id}`} />;
+    case "title": return <input defaultValue={t.title} key={t.updated_at} onBlur={(e) => e.target.value.trim() && e.target.value !== t.title && patch(t, { title: e.target.value })} className="h-8 w-full min-w-0 truncate rounded-lg bg-transparent px-1 text-sm font-medium outline-none hover:bg-surface2 focus:bg-surface2" data-testid={`list-title-${t.id}`} />;
     case "description": return <span className="line-clamp-1 max-w-[220px] text-xs text-sub">{strip(t.description) || "—"}</span>;
     case "status": return <select value={t.status} onChange={(e) => patch(t, { status: e.target.value })} className={sel} data-testid={`list-status-${t.id}`}>{statuses.map((s) => <option key={s.key} value={s.key}>{s.name}</option>)}</select>;
     case "requestor_id": return <span className="flex items-center gap-1.5 text-xs whitespace-nowrap"><Avatar user={userMap[t.requestor_id]} size={20} showStatus={false} />{userMap[t.requestor_id]?.name?.split(" ")[0]}</span>;
@@ -24,7 +25,7 @@ function Cell({ k, t, projects, patch }) {
     case "priority": return <select value={t.priority} onChange={(e) => patch(t, { priority: e.target.value })} className={`${sel} font-semibold`} data-testid={`list-priority-${t.id}`}>{Object.entries(PRIORITY).map(([p, v]) => <option key={p} value={p}>{v.name}</option>)}</select>;
     case "label_ids": return <Labels ids={t.label_ids} small max={2} />;
     case "start_date": return <span className="text-xs whitespace-nowrap">{t.start_date ? fmtDate(t.start_date, "d MMM") : "—"}</span>;
-    case "deadline": { const d = dueInfo(t.deadline, done); return <input type="date" defaultValue={t.deadline ? fmtDate(t.deadline, "yyyy-MM-dd") : ""} key={t.deadline} onBlur={(e) => { const v = e.target.value ? new Date(`${e.target.value}T17:00`).toISOString() : null; if ((v || "").slice(0, 10) !== (t.deadline || "").slice(0, 10)) patch(t, { deadline: v }); }} className={`h-8 rounded-lg bg-transparent px-1 text-xs outline-none hover:bg-surface2 ${d?.cls || ""}`} />; }
+    case "deadline": { const d = dueInfo(t.deadline, done); return <input type="date" defaultValue={t.deadline ? fmtDate(t.deadline, "yyyy-MM-dd") : ""} key={t.deadline} onBlur={(e) => { const v = e.target.value ? new Date(`${e.target.value}T17:00`).toISOString() : null; if ((v || "").slice(0, 10) !== (t.deadline || "").slice(0, 10)) patch(t, { deadline: v }); }} className={`h-8 w-full min-w-0 rounded-lg bg-transparent px-1 text-xs outline-none hover:bg-surface2 ${d?.cls || ""}`} />; }
     case "completed_at": return <span className="text-xs whitespace-nowrap text-emerald-600">{t.completed_at ? fmtDate(t.completed_at, "d MMM HH:mm") : "—"}</span>;
     case "attachments": return t.attachments?.length ? <span className="flex items-center gap-1 text-xs"><Paperclip size={12} />{t.attachments.length}</span> : <span className="text-xs text-sub">—</span>;
     case "project_id": return <span className="text-xs whitespace-nowrap">{projects[t.project_id]?.name || "—"}</span>;
@@ -51,7 +52,7 @@ function ColumnMenu({ cols, cfg, save }) {
             <button onClick={() => move(k, -1)} disabled={!i} className="text-sub disabled:opacity-30" aria-label="Move left"><ArrowUp size={13} /></button><button onClick={() => move(k, 1)} className="text-sub" aria-label="Move right"><ArrowDown size={13} /></button>
             <button onClick={() => toggle(k)} className="text-sub" aria-label="Toggle column" data-testid={`toggle-col-${k}`}>{(cfg.hidden || []).includes(k) ? <EyeOff size={13} /> : <Eye size={13} />}</button></div>))}</div>
         {isManager && <div className="mt-2 flex gap-1 border-t pt-2"><input value={name} onChange={(e) => setName(e.target.value)} placeholder="New custom column" className="h-8 flex-1 rounded-lg border bg-surface2 px-2 text-xs" data-testid="custom-column-input" /><button onClick={add} disabled={!name.trim()} className="btn-accent flex h-8 w-8 items-center justify-center disabled:opacity-40" aria-label="Add column" data-testid="custom-column-add"><Plus size={14} /></button></div>}
-        <button onClick={() => save({})} className="mt-2 w-full text-xs font-semibold text-brand">Reset columns</button>
+        <button onClick={() => save({ hidden: DEFAULT_HIDDEN })} className="mt-2 w-full text-xs font-semibold text-brand">Reset columns</button>
       </PopoverContent></Popover>
   );
 }
@@ -61,7 +62,7 @@ export default function ListView({ tasks, projects, onOpen, selected, setSelecte
   const [collapsed, setCollapsed] = useState({});
   const [sort, setSort] = useState({ k: "number", dir: 1 });
   const [limit, setLimit] = useState({});
-  const cfg = prefs.task_columns || {};
+  const cfg = prefs.task_columns || { hidden: DEFAULT_HIDDEN };
   const all = [...BASE_COLS, ...(ws.task_fields || []).map((f) => [f.key, f.name])];
   const cols = [...(cfg.order || []).map((k) => all.find((c) => c[0] === k)).filter(Boolean), ...all.filter((c) => !(cfg.order || []).includes(c[0]))];
   const visible = cols.filter((c) => !(cfg.hidden || []).includes(c[0]));
@@ -88,16 +89,16 @@ export default function ListView({ tasks, projects, onOpen, selected, setSelecte
                 {collapsed[key] ? <ChevronRight size={15} /> : <ChevronDown size={15} />}<span className="font-bold text-sm text-[#20283B] dark:text-ink">{name}</span><span className="rounded-full bg-surface px-2 text-xs font-semibold">{items.length}</span>
               </button>
               {!collapsed[key] && <>
-                <div className="hidden overflow-x-auto rounded-2xl border bg-surface md:block scroll-thin">
-                  <table className="w-full text-left">
+                <div className="hidden overflow-hidden rounded-2xl border bg-surface md:block">
+                  <table className="w-full table-fixed text-left">
                     <thead><tr className="border-b text-[11px] uppercase tracking-wide text-sub">
-                      <th className="w-10 p-2"><input type="checkbox" checked={items.length > 0 && items.every((t) => selected.includes(t.id))} onChange={(e) => setSelected(e.target.checked ? [...new Set([...selected, ...items.map((t) => t.id)])] : selected.filter((x) => !items.some((t) => t.id === x)))} className="accent-[var(--c-accent)]" aria-label="Select all" data-testid={`select-all-${key}`} /></th>
-                      {visible.map(([k, l]) => <th key={k} className="whitespace-nowrap p-2 font-semibold"><button onClick={() => setSort({ k, dir: sort.k === k ? -sort.dir : 1 })} className="flex items-center gap-1" data-testid={`sort-${k}`}>{l}<ArrowUpDown size={10} className={sort.k === k ? "text-brand" : "opacity-40"} /></button></th>)}
+                      <th className="w-9 p-2"><input type="checkbox" checked={items.length > 0 && items.every((t) => selected.includes(t.id))} onChange={(e) => setSelected(e.target.checked ? [...new Set([...selected, ...items.map((t) => t.id)])] : selected.filter((x) => !items.some((t) => t.id === x)))} className="accent-[var(--c-accent)]" aria-label="Select all" data-testid={`select-all-${key}`} /></th>
+                      {visible.map(([k, l]) => <th key={k} className={`truncate p-2 font-semibold ${k === "title" ? "w-[26%]" : k === "number" ? "w-16" : ""}`}><button onClick={() => setSort({ k, dir: sort.k === k ? -sort.dir : 1 })} className="flex items-center gap-1" data-testid={`sort-${k}`}>{l}<ArrowUpDown size={10} className={sort.k === k ? "text-brand" : "opacity-40"} /></button></th>)}
                     </tr></thead>
                     <tbody>{items.slice(0, lim).map((t) => (
                       <tr key={t.id} className={`border-b last:border-0 hover:bg-surface2 ${selected.includes(t.id) ? "bg-soft-red" : ""}`} data-testid={`task-row-${t.id}`}>
                         <td className="p-2"><input type="checkbox" checked={selected.includes(t.id)} onChange={() => toggleSel(t.id)} className="accent-[var(--c-accent)]" aria-label="Select task" data-testid={`select-task-${t.id}`} /></td>
-                        {visible.map(([k]) => <td key={k} className="p-1.5" onDoubleClick={() => onOpen(t.id)}>{k === "number" ? <button onClick={() => onOpen(t.id)} className="text-xs font-semibold text-brand" data-testid={`open-task-${t.id}`}>{t.number_str}</button> : <Cell k={k} t={t} projects={projects} patch={patch} />}</td>)}
+                        {visible.map(([k]) => <td key={k} className="truncate p-1.5" onDoubleClick={() => onOpen(t.id)}>{k === "number" ? <button onClick={() => onOpen(t.id)} className="text-xs font-semibold text-brand" data-testid={`open-task-${t.id}`}>{t.number_str}</button> : <Cell k={k} t={t} projects={projects} patch={patch} />}</td>)}
                       </tr>))}
                       {!items.length && <tr><td colSpan={visible.length + 1} className="p-4 text-sm text-sub">No tasks</td></tr>}
                     </tbody>

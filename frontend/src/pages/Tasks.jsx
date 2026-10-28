@@ -53,7 +53,7 @@ export function TaskWorkspace({ projectId, compactHeader }) {
           <DropdownMenuContent className="bg-surface" align="end"><DropdownMenuItem onClick={() => exp("csv")} data-testid="export-csv-btn">Export CSV (current filters)</DropdownMenuItem>{selected.length > 0 && <DropdownMenuItem onClick={() => exp("csv", selected)} data-testid="export-selected-btn">Export selected ({selected.length})</DropdownMenuItem>}<DropdownMenuItem onClick={() => exp("json")} data-testid="export-json-btn">Export JSON</DropdownMenuItem></DropdownMenuContent></DropdownMenu>
         <AccentButton onClick={() => setCreate({})} data-testid="new-task-btn"><Plus size={16} />New Task</AccentButton></>} />}
       {compactHeader && <div className="mb-4 flex justify-end gap-2"><GhostButton onClick={() => exp("csv")} data-testid="export-csv-btn"><Download size={15} />CSV</GhostButton><AccentButton onClick={() => setCreate({})} data-testid="new-task-btn"><Plus size={16} />New Task</AccentButton></div>}
-      <div className="mb-4 flex gap-1.5 overflow-x-auto no-scrollbar" data-testid="saved-views">
+      <div className="mb-4 flex flex-wrap gap-1.5" data-testid="saved-views">
         {SAVED_VIEWS.map(([k, l]) => <button key={k} onClick={() => { setSaved(k); setSelected([]); }} className={`h-9 whitespace-nowrap rounded-full px-3.5 text-sm font-medium ${saved === k ? "bg-ink text-[var(--c-surface)]" : "border bg-surface text-sub"}`} data-testid={`saved-view-${k}`}>{l}</button>)}
       </div>
       <div className="mb-5 flex flex-wrap items-center gap-2">

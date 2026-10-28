@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { format } from "date-fns";
-import { CheckSquare, Clock, FolderKanban, MessageCircle, CheckCircle2, Activity, Zap, CalendarClock, StickyNote, Plus, Settings2, Image, ArrowUp, ArrowDown, Eye, EyeOff, RotateCcw, Trash2, BarChart3 } from "lucide-react";
+import { CheckSquare, Clock, FolderKanban, MessageCircle, CheckCircle2, Activity, Zap, CalendarClock, StickyNote, Plus, Settings2, Image, ArrowUp, ArrowDown, Eye, EyeOff, RotateCcw, Trash2, Hash } from "lucide-react";
 import { toast } from "sonner";
 import { useApp } from "../context/AppContext";
 import { api, errMsg, fileUrl } from "../lib/api";
@@ -75,7 +75,7 @@ export default function Dashboard() {
   const doneKeys = statuses.filter((s) => s.is_done).map((s) => s.key);
   const load = async () => {
     const [mine, projects, convs, act, rem] = await Promise.all([api.get("/tasks", { params: { view: "my" } }), api.get("/projects"), api.get("/conversations"), api.get("/activity"), api.get("/reminders")]);
-    setData({ tasks: mine.data, projects: projects.data.filter((p) => p.member_ids.includes(me.user_id)), convs: convs.data.slice(0, 5), act: act.data, rem: rem.data });
+    setData({ tasks: mine.data, projects: projects.data.filter((p) => p.member_ids.includes(me.user_id)), convs: convs.data, act: act.data, rem: rem.data });
   };
   useEffect(() => { load().catch(() => {}); }, []); // eslint-disable-line
   const dash = prefs.dashboard || {};
@@ -98,11 +98,14 @@ export default function Dashboard() {
       case "deadlines": { const up = open.filter((t) => t.deadline).sort((a, b) => a.deadline.localeCompare(b.deadline)).slice(0, 6); return <Widget id={k}>{up.length ? up.map((t) => <TaskRow key={t.id} t={t} />) : <p className="text-sm text-sub">No upcoming deadlines.</p>}</Widget>; }
       case "projects": return <Widget id={k}>{data.projects.length ? data.projects.map((p) => (
         <Link key={p.id} to={`/projects/${p.id}`} className="block rounded-xl px-2 py-2 hover:bg-surface2"><div className="flex justify-between text-sm font-medium"><span className="truncate">{p.name}</span><span className="text-sub">{p.progress}%</span></div><div className="mt-1.5 h-1.5 rounded-full bg-surface2"><div className="h-full rounded-full bg-brand transition-all" style={{ width: `${p.progress}%` }} /></div></Link>)) : <p className="text-sm text-sub">You're not in any project yet.</p>}</Widget>;
-      case "conversations": return <Widget id={k}>{data.convs.map((c) => { const other = c.type === "dm" ? userMap[c.member_ids.find((x) => x !== me.user_id)] : null; return (
-        <Link key={c.id} to={`/messages/${c.id}`} className="flex items-center gap-3 rounded-xl px-2 py-2 hover:bg-surface2">{other ? <Avatar user={other} size={30} /> : <span className="flex h-[30px] w-[30px] items-center justify-center rounded-full bg-soft-purple text-xs font-bold">#</span>}<span className="min-w-0 flex-1"><span className="block truncate text-sm font-medium">{other?.name || c.name}</span><span className="block truncate text-xs text-sub">{c.last_message_preview}</span></span>{c.unread > 0 && <span className="rounded-full bg-brand px-1.5 text-[10px] font-bold text-white">{c.unread}</span>}</Link>); })}</Widget>;
+      case "conversations": { const row = (c) => { const other = c.type === "dm" ? userMap[c.member_ids.find((x) => x !== me.user_id)] : null; return (
+        <Link key={c.id} to={`/messages/${c.id}`} className="flex items-center gap-3 rounded-xl px-2 py-2 hover:bg-surface2">{other ? <Avatar user={other} size={30} /> : <span className="flex h-[30px] w-[30px] items-center justify-center rounded-full bg-soft-purple text-xs font-bold">#</span>}<span className="min-w-0 flex-1"><span className="block truncate text-sm font-medium">{other?.name || c.name}</span><span className="block truncate text-xs text-sub">{c.last_message_preview}</span></span>{c.unread > 0 && <span className="rounded-full bg-brand px-1.5 text-[10px] font-bold text-white">{c.unread}</span>}</Link>); };
+        const dms = data.convs.filter((c) => c.type === "dm").slice(0, 3);
+        const grs = data.convs.filter((c) => c.type === "group").slice(0, 3);
+        return <Widget id={k}><p className="px-2 pb-1 text-[11px] font-semibold uppercase tracking-wider text-sub">Personal</p>{dms.length ? dms.map(row) : <p className="px-2 pb-2 text-sm text-sub">No personal chats yet.</p>}<p className="px-2 pb-1 pt-3 text-[11px] font-semibold uppercase tracking-wider text-sub">Groups & channels</p>{grs.map(row)}</Widget>; }
       case "completed": { const done = data.tasks.filter((t) => doneKeys.includes(t.status)).slice(0, 5); return <Widget id={k}>{done.length ? done.map((t) => <TaskRow key={t.id} t={t} done />) : <p className="text-sm text-sub">Completed tasks will appear here.</p>}</Widget>; }
       case "activity": return <Widget id={k}><ul className="space-y-2">{data.act.slice(0, 7).map((a) => <li key={a.id} className="flex items-start gap-2.5 text-sm"><Avatar user={userMap[a.actor_id]} size={24} showStatus={false} /><span className="min-w-0 flex-1"><b className="font-semibold">{userMap[a.actor_id]?.name?.split(" ")[0]}</b> <span className="text-sub">{a.action}</span> <Link to={`/tasks?task=${a.task_id}`} className="font-medium hover:underline">{a.task_title}</Link><span className="block text-[11px] text-sub">{rel(a.created_at)}</span></span></li>)}{!data.act.length && <li className="text-sm text-sub">No activity yet.</li>}</ul></Widget>;
-      case "quick": return <Widget id={k}><div className="grid grid-cols-2 gap-2">{[["New task", CheckSquare, () => setNewTask(true), "bg-soft-red"], ["Message", MessageCircle, () => navigate("/messages"), "bg-soft-blue"], ["New poll", BarChart3, () => navigate("/polls"), "bg-soft-purple"], ["Projects", FolderKanban, () => navigate("/projects"), "bg-soft-green"]].map(([t, I, fn, c]) => <button key={t} onClick={fn} className={`flex h-20 flex-col items-start justify-between rounded-2xl p-3 text-left text-sm font-semibold ${c} transition-transform hover:-translate-y-0.5`} data-testid={`quick-${t.replace(" ", "-").toLowerCase()}`}><I size={18} />{t}</button>)}</div></Widget>;
+      case "quick": return <Widget id={k}><div className="grid grid-cols-2 gap-2">{[["New task", CheckSquare, () => setNewTask(true), "bg-soft-red"], ["Message", MessageCircle, () => navigate("/messages"), "bg-soft-blue"], ["Groups", Hash, () => navigate("/groups"), "bg-soft-purple"], ["Projects", FolderKanban, () => navigate("/projects"), "bg-soft-green"]].map(([t, I, fn, c]) => <button key={t} onClick={fn} className={`flex h-20 flex-col items-start justify-between rounded-2xl p-3 text-left text-sm font-semibold ${c} transition-transform hover:-translate-y-0.5`} data-testid={`quick-${t.replace(" ", "-").toLowerCase()}`}><I size={18} />{t}</button>)}</div></Widget>;
       case "meetings": return <Widget id={k}><Reminders kind="meeting" items={data.rem} reload={load} /></Widget>;
       case "reminders": return <Widget id={k}><Reminders kind="reminder" items={data.rem} reload={load} /></Widget>;
       default: return null;
@@ -114,7 +117,7 @@ export default function Dashboard() {
       <div className="pointer-events-none absolute inset-0 overflow-hidden"><div className="absolute inset-0" style={layer.base} /><div className="absolute inset-0" style={layer.overlay} /></div>
       <div className="relative z-10 mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-10 lg:py-10">
         <div className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-          <div className="glass w-fit rounded-3xl px-5 py-4">
+          <div className="px-1">
             <p className="text-sm text-sub" data-testid="dashboard-date">{format(new Date(), "EEEE, d MMMM yyyy")}</p>
             <h1 className="text-3xl sm:text-4xl font-bold tracking-tight" data-testid="dashboard-greeting">{greet}, {me.name.split(" ")[0]}</h1>
           </div>

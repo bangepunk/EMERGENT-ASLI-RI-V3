@@ -33,7 +33,7 @@ export function TaskCard({ t, onOpen, done, draggable, onDragStart }) {
 }
 
 export default function Board({ tasks, onOpen, onNew, reload }) {
-  const { statuses, ws } = useApp();
+  const { statuses } = useApp();
   const [over, setOver] = useState(null);
   const dark = document.documentElement.classList.contains("dark");
   const drop = async (e, key) => {
@@ -44,12 +44,12 @@ export default function Board({ tasks, onOpen, onNew, reload }) {
     try { await api.patch(`/tasks/${id}`, { status: key }); reload(); toast.success(`Moved to ${statuses.find((s) => s.key === key)?.name}`); } catch (er) { toast.error(errMsg(er)); }
   };
   return (
-    <div className="-mx-4 flex snap-x snap-mandatory gap-4 overflow-x-auto px-4 pb-4 scroll-thin sm:mx-0 sm:px-0" data-testid="task-board">
+    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:[grid-template-columns:repeat(var(--cols),minmax(0,1fr))]" style={{ "--cols": statuses.length }} data-testid="task-board">
       {statuses.map((s) => {
         const col = tasks.filter((t) => t.status === s.key);
         return (
           <div key={s.key} onDragOver={(e) => { e.preventDefault(); setOver(s.key); }} onDragLeave={() => setOver(null)} onDrop={(e) => drop(e, s.key)}
-            className={`flex w-[85vw] max-w-[320px] shrink-0 snap-start flex-col rounded-3xl p-3 transition-shadow sm:w-[300px] ${over === s.key ? "ring-2 ring-[var(--c-accent)]" : ""}`}
+            className={`flex min-w-0 flex-col rounded-3xl p-2.5 transition-shadow ${over === s.key ? "ring-2 ring-[var(--c-accent)]" : ""}`}
             style={{ background: dark ? `${s.color}1A` : s.color }} data-testid={`kanban-column-${s.key}`}>
             <div className="mb-3 flex items-center gap-2 px-1"><span className="flex h-6 min-w-6 items-center justify-center rounded-full bg-surface px-1.5 text-xs font-bold">{col.length}</span><span className="flex-1 font-bold">{s.name}</span>
               <button onClick={() => onNew(s.key)} className="flex h-8 w-8 items-center justify-center rounded-full hover:bg-surface" aria-label={`Add task to ${s.name}`} data-testid={`kanban-add-${s.key}`}><Plus size={16} /></button></div>
@@ -60,7 +60,6 @@ export default function Board({ tasks, onOpen, onNew, reload }) {
           </div>
         );
       })}
-      {ws && null}
     </div>
   );
 }
