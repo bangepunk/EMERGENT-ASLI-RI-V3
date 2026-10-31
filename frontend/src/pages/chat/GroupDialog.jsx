@@ -43,10 +43,11 @@ export function GroupDialog({ open, onOpenChange, group, onSaved }) {
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="bg-surface rounded-3xl max-w-md max-h-[90dvh] overflow-y-auto">
         <DialogHeader><DialogTitle>{group ? "Edit group" : "Create group"}</DialogTitle></DialogHeader>
-        <div className="flex items-center gap-3">
+        {me.role === "super_admin" ? <div className="flex items-center gap-3">
           {f.image ? <img src={fileUrl(f.image)} alt="" className="h-14 w-14 rounded-2xl object-cover" /> : <span className="h-14 w-14 rounded-2xl bg-soft-purple" />}
-          <label className="cursor-pointer text-sm font-semibold text-brand">Upload image<input type="file" accept="image/*" hidden onChange={img} data-testid="group-image-input" /></label>
-        </div>
+          <label className="cursor-pointer text-sm font-semibold text-brand">Upload foto grup<input type="file" accept="image/*" hidden onChange={img} data-testid="group-image-input" /></label>
+          {f.image && <button type="button" onClick={() => setF({ ...f, image: "" })} className="text-xs text-sub" data-testid="group-image-remove">Hapus</button>}
+        </div> : f.image ? <img src={fileUrl(f.image)} alt="" className="h-14 w-14 rounded-2xl object-cover" /> : null}
         <input value={f.name} onChange={(e) => setF({ ...f, name: e.target.value })} placeholder="Group name" className="h-11 rounded-xl border bg-surface2 px-3 text-sm outline-none" data-testid="group-name-input" />
         <textarea value={f.description} onChange={(e) => setF({ ...f, description: e.target.value })} placeholder="Description" className="min-h-[72px] rounded-xl border bg-surface2 p-3 text-sm outline-none" data-testid="group-description-input" />
         <div className="grid grid-cols-2 gap-2">

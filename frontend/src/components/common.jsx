@@ -37,6 +37,11 @@ export function Avatar({ user, size = 36, showStatus = true, className = "" }) {
   );
 }
 
+export function GroupIcon({ c, size = 42, rounded = "rounded-2xl" }) {
+  if (c?.image) return <img src={fileUrl(c.image)} alt={c.name || "group"} className={`${rounded} shrink-0 object-cover`} style={{ width: size, height: size }} data-testid={`group-avatar-${c.id}`} />;
+  return <span className={`flex shrink-0 items-center justify-center ${rounded} bg-soft-purple font-bold text-ink`} style={{ width: size, height: size, fontSize: size * 0.4 }} data-testid={`group-avatar-${c?.id}`}>{(c?.name || "#").trim().slice(0, 1).toUpperCase()}</span>;
+}
+
 export function AvatarStack({ ids = [], max = 4, size = 26 }) {
   const { userMap } = useApp();
   return (

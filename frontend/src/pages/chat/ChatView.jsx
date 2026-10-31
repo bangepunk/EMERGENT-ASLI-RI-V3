@@ -1,11 +1,11 @@
 import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, Phone, Video, Search, PanelRight, Hash, Lock, BellOff, Bell, X, Pin, FileText, CheckSquare, UserPlus, LogOut, Archive, Trash2, Shield, MapPin } from "lucide-react";
+import { ArrowLeft, Phone, Video, Search, PanelRight, BellOff, Bell, X, Pin, FileText, CheckSquare, UserPlus, LogOut, Archive, Trash2, Shield, MapPin } from "lucide-react";
 import { toast } from "sonner";
 import { api, errMsg, fileUrl } from "../../lib/api";
 import { useApp } from "../../context/AppContext";
 import { useCall } from "../../components/CallLayer";
-import { Avatar, Spinner, fmtDate } from "../../components/common";
+import { Avatar, Spinner, fmtDate, GroupIcon } from "../../components/common";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "../../components/ui/sheet";
 import MessageItem from "./MessageItem";
 import Composer from "./Composer";
@@ -135,7 +135,7 @@ export default function ChatView({ cid, onChange }) {
         <header className="flex h-16 shrink-0 items-center gap-2 border-b bg-surface px-2 sm:px-4 pt-safe">
           <button onClick={() => navigate("/messages")} className="btn-ghost flex h-11 w-11 items-center justify-center lg:hidden" aria-label="Back" data-testid="chat-back-btn"><ArrowLeft size={20} /></button>
           <button onClick={openPanel} className="flex min-w-0 flex-1 items-center gap-3 text-left">
-            {other ? <Avatar user={other} size={38} /> : <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-soft-purple">{conv.group_type === "private" ? <Lock size={16} /> : <Hash size={16} />}</span>}
+            {other ? <Avatar user={other} size={38} /> : <GroupIcon c={conv} size={40} />}
             <span className="min-w-0"><span className="block truncate font-bold" data-testid="chat-title">{title}</span>
               <span className="block truncate text-xs text-sub">{typers.length ? <span className="text-brand" data-testid="typing-indicator">{typers.join(", ")} typing…</span> : other ? (online.has(other.user_id) ? "Online" : other.job_title) : `${conv.member_ids.length} members${conv.archived ? " · Archived" : ""}`}</span></span>
           </button>

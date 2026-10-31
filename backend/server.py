@@ -14,12 +14,13 @@ import routes_chat  # noqa: E402
 import routes_tasks  # noqa: E402
 import routes_misc  # noqa: E402
 import routes_feed  # noqa: E402
+import routes_reports  # noqa: E402
 from seed import seed_all  # noqa: E402
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("circle")
 app = FastAPI(title="CIRCLE")
-for r in (routes_auth, routes_people, routes_chat, routes_tasks, routes_misc, routes_feed):
+for r in (routes_auth, routes_people, routes_chat, routes_tasks, routes_misc, routes_feed, routes_reports):
     app.include_router(r.router)
 
 origins = os.environ.get("CORS_ORIGINS", "").split(",")

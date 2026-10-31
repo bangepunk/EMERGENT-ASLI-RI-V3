@@ -1,0 +1,9 @@
+crons:
+  - name: weekly-report
+    description: "Emails admins and managers the weekly checkpoint progress and open issues per board, Mondays 9am WIB"
+    cron: "0 9 * * 1"
+    timezone: "Asia/Jakarta"
+    endpoint: "{{BASE_URL}}/api/cron/weekly-report"
+    method: POST
+    # Cron endpoints must ack 2xx immediately; enqueue/background the actual work.
+    enabled: true

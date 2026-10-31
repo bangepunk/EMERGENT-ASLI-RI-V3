@@ -7,7 +7,7 @@ from core import db, now_iso, new_id, get_user, is_admin, require_admin, notify,
 router = APIRouter(prefix="/api")
 P = {"_id": 0}
 PREF_KEYS = {"theme_mode", "theme", "background", "dashboard", "notifications", "task_columns", "task_card_style", "push_enabled", "task_view", "task_sheet"}
-WS_KEYS = {"name", "tagline", "description", "logo_file_id", "theme", "allowed_domains", "auto_join_domain", "require_approval", "org_levels", "divisions", "item_types"}
+WS_KEYS = {"name", "tagline", "description", "logo_file_id", "theme", "allowed_domains", "auto_join_domain", "require_approval", "org_levels", "divisions", "item_types", "login_image_file_id"}
 MAX_SIZE = 15 * 1024 * 1024
 ALLOWED = {"image/png", "image/jpeg", "image/gif", "image/webp", "application/pdf", "text/plain", "text/csv",
            "application/msword", "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
@@ -43,7 +43,7 @@ async def get_ws(u=Depends(get_user)):
 
 @router.get("/public/branding")
 async def branding():
-    ws = await db.workspaces.find_one({"id": "ws_internal"}, {"_id": 0, "name": 1, "tagline": 1, "description": 1, "logo_file_id": 1, "brand_name": 1})
+    ws = await db.workspaces.find_one({"id": "ws_internal"}, {"_id": 0, "name": 1, "tagline": 1, "description": 1, "logo_file_id": 1, "brand_name": 1, "login_image_file_id": 1})
     return ws or {}
 
 
@@ -142,6 +142,16 @@ async def public_logo(fid: str):
         raise HTTPException(404, "Not found")
     data, _ = get_object(f["storage_path"])
     return Response(data, media_type=f["content_type"])
+
+
+@router.get("/public/login-image/{fid}")
+async def public_login_image(fid: str):
+    ws = await db.workspaces.find_one({"id": "ws_internal", "login_image_file_id": fid})
+    f = await db.files.find_one({"id": fid, "content_type": {"$regex": "^image/"}}, P) if ws else None
+    if not f:
+        raise HTTPException(404, "Not found")
+    data, _ = get_object(f["storage_path"])
+    return Response(data, media_type=f["content_type"], headers={"Cache-Control": "public, max-age=3600"})
 
 
 @router.get("/reminders")

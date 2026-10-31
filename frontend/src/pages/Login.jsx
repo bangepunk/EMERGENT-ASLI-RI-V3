@@ -13,12 +13,13 @@ const STATUS_MSG = {
   error: "Sign-in failed. Please try again.",
 };
 
-function Floating() {
+function Floating({ image }) {
+  const src = image ? `${process.env.REACT_APP_BACKEND_URL}/api/public/login-image/${image}` : "/login-default.jpg";
   return (
-    <div className="relative hidden lg:flex flex-1 overflow-hidden rounded-[32px] bg-[linear-gradient(150deg,#FF8A9A_0%,#FF5364_38%,#8B6CFF_100%)] p-10 text-white">
-      <div className="absolute -right-24 -top-24 h-80 w-80 rounded-full bg-white/15 blur-2xl" />
-      <div className="absolute -bottom-32 -left-10 h-96 w-96 rounded-full bg-[#FFC53D]/30 blur-3xl" />
-      <div className="relative z-10 flex flex-col justify-between">
+    <div className="relative hidden lg:flex flex-1 overflow-hidden rounded-[32px] bg-[#20283B] p-10 text-white" data-testid="login-hero">
+      <img src={src} alt="" className="absolute inset-0 h-full w-full object-cover" data-testid="login-hero-image" />
+      <div className="absolute inset-0 bg-gradient-to-t from-[#20283B]/90 via-[#20283B]/30 to-transparent" />
+      <div className="relative z-10 flex w-full flex-col justify-between">
         <span className="inline-flex w-fit items-center gap-2 rounded-full bg-white/20 px-4 py-1.5 text-sm font-medium backdrop-blur"><Sparkles size={14} />Your Team. One Circle.</span>
         <div>
           <h2 className="max-w-md text-5xl font-extrabold leading-[1.05] tracking-tight">Connect people. Move work forward.</h2>
@@ -63,7 +64,7 @@ export default function Login() {
   const logo = brand.logo_file_id ? { logo_file_id: null } : null;
   return (
     <div className="flex min-h-screen bg-background p-3 sm:p-5">
-      <Floating />
+      <Floating image={brand.login_image_file_id} />
       <div className="flex flex-1 items-center justify-center px-4 py-10 lg:max-w-[560px]">
         <div className="w-full max-w-sm animate-rise">
           <div className="flex items-center gap-3">

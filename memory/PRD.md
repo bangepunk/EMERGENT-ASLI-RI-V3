@@ -49,6 +49,11 @@ Creative, marketing, product teams, management; workspace admins.
 - Task boards (db.boards): admin/manager create/edit (name, color, members, add-by-division), admin delete (empty only). Admin sees all boards; others only boards they're member/creator of — enforced on list/get/patch/bulk/comments/export/stats/search/profile. Assignee/reviewer/collaborator/checkpoint PIC must be board members. Startup migration split existing tasks into "Board <division>" by assignee department (task people added as members)
 - Checkpoints per task: title, PIC, done (done_at/by), progress % stored on task; per-checkpoint discussion thread, "Laporkan kendala" issues with resolve → task.open_issues; card/list show progress & issue badge; saved view "Ada Kendala"
 
+## Revisi 4 (2026-10-31)
+- Weekly progress email (Emergent managed Resend, email_service.py + routes_reports.py): cron .emergent/crons.yml "weekly-report" Mondays 09:00 Asia/Jakarta → POST /api/cron/weekly-report (Bearer WEBHOOK_CRON_SECRET, idempotent via db.cron_runs, background send). Recipients: active admin/manager roles in ws_internal; each gets their scoped boards: active tasks, checkpoint progress + next checkpoint/PIC, checkpoints done this week, open issues. Settings → Workspace "Kirim contoh ke email saya" (POST /api/reports/weekly/test)
+- Login page hero image: default /login-default.jpg (Unsplash), admin upload in Settings → Workspace (workspace.login_image_file_id, public GET /api/public/login-image/{fid})
+- Group photo shown everywhere (GroupIcon: Messages list, chat header, Dashboard recent); fallback = group initial; only super_admin may set/change group image (backend 403)
+
 ## Backlog
 - P1: shadcn date pickers instead of native inputs; TURN server for calls behind strict NATs; true browser push (service worker) when tab closed; link previews for URLs.
 - P2: drag reorder of org units among siblings (API exists), message threads view, sticker pack management UI per pack, larger-group calls via SFU.

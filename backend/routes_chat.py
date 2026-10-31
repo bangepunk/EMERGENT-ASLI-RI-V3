@@ -73,7 +73,7 @@ async def create_group(body: dict = Body(...), u=Depends(get_user)):
     valid = [x["user_id"] async for x in db.users.find({"workspace_id": u["workspace_id"], "user_id": {"$in": body.get("member_ids", [])}}, {"user_id": 1})]
     members = sorted(set(valid) | {u["user_id"]})
     c = {"id": new_id("grp"), "workspace_id": u["workspace_id"], "type": "group", "group_type": gt, "name": name[:80],
-         "description": body.get("description", ""), "image": body.get("image", ""), "location": body.get("location", ""),
+         "description": body.get("description", ""), "image": body.get("image", "") if u.get("role") == "super_admin" else "", "location": body.get("location", ""),
          "member_ids": members, "admin_ids": [u["user_id"]], "created_by": u["user_id"], "created_at": now_iso(),
          "last_message_at": now_iso(), "last_message_preview": "", "reads": {}, "pinned_ids": [], "archived": False}
     await db.conversations.insert_one(dict(c))
@@ -105,6 +105,8 @@ async def update_group(cid: str, body: dict = Body(...), u=Depends(get_user)):
     if not can_manage_group(c, u):
         raise HTTPException(403, "Only group admins can edit")
     upd = {k: v for k, v in body.items() if k in ("name", "description", "image", "location", "group_type", "archived")}
+    if "image" in upd and upd["image"] != c.get("image", "") and u.get("role") != "super_admin":
+        raise HTTPException(403, "Hanya Super Admin yang bisa mengganti foto grup")
     if "name" in upd and not str(upd["name"]).strip():
         raise HTTPException(400, "Group name is required")
     await db.conversations.update_one({"id": cid}, {"$set": upd})

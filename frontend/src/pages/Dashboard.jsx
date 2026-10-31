@@ -7,7 +7,7 @@ import { toast } from "sonner";
 import { useApp } from "../context/AppContext";
 import { api, errMsg, fileUrl } from "../lib/api";
 import { bgLayer } from "../lib/theme";
-import { Avatar, Labels, PriorityBadge, dueInfo, rel, Empty, AccentButton, GhostButton } from "../components/common";
+import { Avatar, Labels, PriorityBadge, dueInfo, rel, Empty, AccentButton, GhostButton, GroupIcon } from "../components/common";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "../components/ui/sheet";
 import BackgroundEditor from "./settings/BackgroundEditor";
 import TaskCreate from "./tasks/TaskCreate";
@@ -101,7 +101,7 @@ export default function Dashboard() {
       case "projects": return <Widget id={k}>{data.projects.length ? data.projects.map((p) => (
         <Link key={p.id} to={`/projects/${p.id}`} className="block rounded-xl px-2 py-2 hover:bg-surface2"><div className="flex justify-between text-sm font-medium"><span className="truncate">{p.name}</span><span className="text-sub">{p.progress}%</span></div><div className="mt-1.5 h-1.5 rounded-full bg-surface2"><div className="h-full rounded-full bg-brand transition-all" style={{ width: `${p.progress}%` }} /></div></Link>)) : <p className="text-sm text-sub">You're not in any project yet.</p>}</Widget>;
       case "conversations": { const row = (c) => { const other = c.type === "dm" ? userMap[c.member_ids.find((x) => x !== me.user_id)] : null; return (
-        <Link key={c.id} to={`/messages/${c.id}`} className="flex items-center gap-3 rounded-xl px-2 py-2 hover:bg-surface2">{other ? <Avatar user={other} size={30} /> : <span className="flex h-[30px] w-[30px] items-center justify-center rounded-full bg-soft-purple text-xs font-bold">#</span>}<span className="min-w-0 flex-1"><span className="block truncate text-sm font-medium">{other?.name || c.name}</span><span className="block truncate text-xs text-sub">{c.last_message_preview}</span></span>{c.unread > 0 && <span className="rounded-full bg-brand px-1.5 text-[10px] font-bold text-white">{c.unread}</span>}</Link>); };
+        <Link key={c.id} to={`/messages/${c.id}`} className="flex items-center gap-3 rounded-xl px-2 py-2 hover:bg-surface2">{other ? <Avatar user={other} size={30} /> : <GroupIcon c={c} size={30} rounded="rounded-full" />}<span className="min-w-0 flex-1"><span className="block truncate text-sm font-medium">{other?.name || c.name}</span><span className="block truncate text-xs text-sub">{c.last_message_preview}</span></span>{c.unread > 0 && <span className="rounded-full bg-brand px-1.5 text-[10px] font-bold text-white">{c.unread}</span>}</Link>); };
         const dms = data.convs.filter((c) => c.type === "dm").slice(0, 3);
         const grs = data.convs.filter((c) => c.type === "group").slice(0, 3);
         return <Widget id={k}><p className="px-2 pb-1 text-[11px] font-semibold uppercase tracking-wider text-sub">Personal</p>{dms.length ? dms.map(row) : <p className="px-2 pb-2 text-sm text-sub">No personal chats yet.</p>}<p className="px-2 pb-1 pt-3 text-[11px] font-semibold uppercase tracking-wider text-sub">Groups & channels</p>{grs.map(row)}</Widget>; }

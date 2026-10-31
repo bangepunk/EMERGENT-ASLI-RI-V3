@@ -60,13 +60,29 @@ export function PeopleAccess() {
   );
 }
 
+export function WeeklyReportCard() {
+  const [busy, setBusy] = useState(false);
+  const test = async () => { setBusy(true); try { const { data } = await api.post("/reports/weekly/test"); toast.success(`Contoh laporan dikirim ke ${data.sent_to}`); } catch (e) { toast.error(errMsg(e)); } setBusy(false); };
+  return (
+    <Card title="Laporan progres mingguan" testid="weekly-report-card">
+      <p className="text-sm text-sub">Setiap Senin jam 09.00 WIB, admin dan manager menerima email berisi progres checkpoint dan kendala yang belum selesai di tiap board yang bisa mereka akses.</p>
+      <button onClick={test} disabled={busy} className="btn-ghost mt-3 h-10 border px-4 text-sm font-semibold disabled:opacity-50" data-testid="weekly-report-test-btn">{busy ? "Mengirim…" : "Kirim contoh ke email saya"}</button>
+    </Card>
+  );
+}
+
 export function WorkspaceBranding() {
   const { ws, reloadWs } = useApp();
   const [f, setF] = useState({ brand_name: ws.brand_name, name: ws.name, tagline: ws.tagline, description: ws.description, org_levels: (ws.org_levels || []).join(", ") });
   const logo = async (e) => { const up = await uploadFile(e.target.files[0]).catch((er) => toast.error(errMsg(er))); if (up) run(() => api.patch("/workspace", { logo_file_id: up.id }), "Logo updated").then(reloadWs); };
+  const loginImg = async (e) => { const fl = e.target.files[0]; if (!fl?.type.startsWith("image/")) return toast.error("Pilih file gambar"); const up = await uploadFile(fl).catch((er) => toast.error(errMsg(er))); if (up) run(() => api.patch("/workspace", { login_image_file_id: up.id }), "Gambar login diperbarui").then(reloadWs); };
   return (
     <Card title="Workspace identity" testid="workspace-branding">
       <div className="mb-4 flex items-center gap-3"><Logo ws={ws} size={48} /><label className="cursor-pointer text-sm font-semibold text-brand">Upload logo<input type="file" accept="image/*" hidden onChange={logo} data-testid="logo-upload-input" /></label>{ws.logo_file_id && <button onClick={() => run(() => api.patch("/workspace", { logo_file_id: null })).then(reloadWs)} className="text-xs text-sub">Remove</button>}</div>
+      <div className="mb-4 flex items-center gap-3" data-testid="login-image-setting">
+        <img src={ws.login_image_file_id ? `${process.env.REACT_APP_BACKEND_URL}/api/public/login-image/${ws.login_image_file_id}` : "/login-default.jpg"} alt="Gambar login" className="h-14 w-24 rounded-xl object-cover" data-testid="login-image-preview" />
+        <div><p className="text-sm font-semibold">Gambar halaman login</p><div className="flex gap-3"><label className="cursor-pointer text-sm font-semibold text-brand">Upload gambar<input type="file" accept="image/*" hidden onChange={loginImg} data-testid="login-image-upload-input" /></label>{ws.login_image_file_id && <button onClick={() => run(() => api.patch("/workspace", { login_image_file_id: null }), "Kembali ke gambar default").then(reloadWs)} className="text-xs text-sub" data-testid="login-image-reset">Pakai default</button>}</div></div>
+      </div>
       <div className="grid gap-3 sm:grid-cols-2">
         {[["brand_name", "App name"], ["name", "Workspace name"], ["tagline", "Tagline"], ["description", "Description"], ["org_levels", "Organization levels (comma separated)"]].map(([k, l]) => <label key={k} className="text-xs font-semibold text-sub">{l}<input value={f[k] || ""} onChange={(e) => setF({ ...f, [k]: e.target.value })} className={`${inp} mt-1 w-full`} data-testid={`ws-${k}-input`} /></label>)}
       </div>

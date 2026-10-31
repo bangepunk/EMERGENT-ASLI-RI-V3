@@ -1,9 +1,9 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { Plus, Search, Hash, Lock, MessageCircle } from "lucide-react";
+import { Plus, Search, MessageCircle } from "lucide-react";
 import { useApp } from "../context/AppContext";
 import { api } from "../lib/api";
-import { Avatar, Empty, fmtTime } from "../components/common";
+import { Avatar, Empty, fmtTime, GroupIcon } from "../components/common";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "../components/ui/dialog";
 import ChatView from "./chat/ChatView";
 
@@ -60,7 +60,7 @@ export default function Messages() {
           {list.map((c) => (
             <button key={c.id} onClick={() => navigate(`/messages/${c.id}`)} data-testid={`conversation-item-${c.id}`}
               className={`flex w-full items-center gap-3 rounded-2xl p-2.5 text-left transition-colors ${cid === c.id ? "bg-soft-red" : "hover:bg-surface2"}`}>
-              {c.other ? <Avatar user={c.other} size={42} /> : <span className="flex h-[42px] w-[42px] shrink-0 items-center justify-center rounded-2xl bg-soft-purple text-ink">{c.group_type === "private" ? <Lock size={16} /> : <Hash size={16} />}</span>}
+              {c.other ? <Avatar user={c.other} size={42} /> : <GroupIcon c={c} size={42} />}
               <span className="min-w-0 flex-1">
                 <span className="flex items-center justify-between gap-2"><span className="truncate text-sm font-semibold">{c.title}</span><span className="shrink-0 text-[10px] text-sub">{fmtTime(c.last_message_at)}</span></span>
                 <span className="flex items-center justify-between gap-2"><span className="truncate text-xs text-sub">{c.last_message_preview || "No messages yet"}</span>{c.unread > 0 && <span className="rounded-full bg-brand px-1.5 text-[10px] font-bold text-white" data-testid="conversation-unread">{c.unread}</span>}</span>
