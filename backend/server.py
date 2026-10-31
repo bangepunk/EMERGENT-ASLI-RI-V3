@@ -36,6 +36,8 @@ async def health():
 async def startup():
     await seed_all()
     await db.workspaces.update_many({"item_types": {"$exists": False}}, {"$set": {"item_types": routes_tasks.DEFAULT_ITEMS}})
+    await routes_tasks.migrate_boards()
+    await routes_feed.backfill_tags()
     try:
         init_storage()
         logger.info("Storage initialized")

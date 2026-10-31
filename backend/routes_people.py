@@ -72,7 +72,8 @@ async def get_profile(uid: str, u=Depends(get_user)):
     if not t:
         raise HTTPException(404, "Employee not found")
     ws = await db.workspaces.find_one({"id": u["workspace_id"]}, {"_id": 0})
-    tasks = await db.tasks.find({"workspace_id": u["workspace_id"], "assignee_id": uid, "archived": {"$ne": True}},
+    from routes_tasks import scoped
+    tasks = await db.tasks.find(await scoped(u, {"workspace_id": u["workspace_id"], "assignee_id": uid, "archived": {"$ne": True}}),
                                 {"_id": 0, "id": 1, "number": 1, "title": 1, "status": 1, "priority": 1, "deadline": 1, "label_ids": 1}).sort("updated_at", -1).to_list(50)
     out = public_user(t, u, ws)
     out["tasks"] = tasks

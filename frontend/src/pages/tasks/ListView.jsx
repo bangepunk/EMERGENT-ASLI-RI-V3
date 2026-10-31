@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { ChevronDown, ChevronRight, Columns3, ArrowUp, ArrowDown, Eye, EyeOff, Plus, ArrowUpDown, Pencil, Maximize2, Link2 } from "lucide-react";
+import { ChevronDown, ChevronRight, Columns3, ArrowUp, ArrowDown, Eye, EyeOff, Plus, ArrowUpDown, Pencil, Maximize2, Link2, AlertTriangle } from "lucide-react";
 import { toast } from "sonner";
 import { api, errMsg } from "../../lib/api";
 import { useApp } from "../../context/AppContext";
@@ -8,7 +8,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "../../components/ui/pop
 import { TaskCard } from "./Board";
 import { ItemPicker, ItemChip } from "./fields";
 
-const COLS = [["assignee_id", "Name", 12], ["label_ids", "Owner", 10], ["item_type", "Item", 13], ["link_url", "Link File/Folder", 15], ["title", "Title", 18], ["submit_date", "Submit Date", 11], ["deadline", "Deadline", 11], ["status", "Status", 11], ["number", "ID", 5], ["priority", "Priority", 8], ["requestor_id", "Requestor", 10], ["project_id", "Project", 10], ["completed_at", "Completed", 9], ["updated_at", "Last updated", 9]];
+const COLS = [["assignee_id", "Name", 12], ["label_ids", "Owner", 10], ["item_type", "Item", 13], ["link_url", "Link File/Folder", 15], ["title", "Title", 18], ["submit_date", "Submit Date", 11], ["deadline", "Deadline", 11], ["status", "Status", 11], ["progress", "Progress", 9], ["number", "ID", 5], ["priority", "Priority", 8], ["requestor_id", "Requestor", 10], ["project_id", "Project", 10], ["completed_at", "Completed", 9], ["updated_at", "Last updated", 9]];
 const DEFAULT_HIDDEN = ["number", "priority", "requestor_id", "project_id", "completed_at", "updated_at"];
 const ci = "h-8 w-full min-w-0 rounded-md bg-transparent px-1.5 text-xs outline-none hover:bg-surface2 focus:bg-surface focus:ring-2 focus:ring-[var(--c-accent)]";
 const pill = "h-7 w-full min-w-0 cursor-pointer truncate rounded-full px-2.5 text-xs font-medium outline-none";
@@ -49,6 +49,7 @@ function Cell({ k, t, projects, patch, onOpen }) {
     case "submit_date": return <input type="date" defaultValue={t.submit_date || ""} key={`sd${t.submit_date}`} onChange={(e) => e.target.value !== (t.submit_date || "") && patch(t, { submit_date: e.target.value || null })} className={ci} data-testid={`sheet-submit-${t.id}`} />;
     case "deadline": { const d = dueInfo(t.deadline, done); return <input type="date" defaultValue={dayOf(t.deadline)} key={`dl${t.deadline}`} onChange={(e) => { if (e.target.value !== dayOf(t.deadline)) patch(t, { deadline: e.target.value ? new Date(`${e.target.value}T17:00`).toISOString() : null }); }} className={`${ci} ${d?.cls || ""}`} data-testid={`sheet-deadline-${t.id}`} />; }
     case "status": { const s = statuses.find((x) => x.key === t.status); return <select value={t.status} onChange={(e) => patch(t, { status: e.target.value })} className={`${pill} text-[#20283B]`} style={{ background: s?.color }} data-testid={`list-status-${t.id}`}>{statuses.map((x) => <option key={x.key} value={x.key} style={OPT}>{x.name}</option>)}</select>; }
+    case "progress": return t.progress == null ? <span className="px-1.5 text-xs text-sub">—</span> : <div className="flex items-center gap-1.5 px-1.5" data-testid={`sheet-progress-${t.id}`}><span className="block h-1.5 flex-1 overflow-hidden rounded-full bg-surface2"><span className={`block h-full rounded-full ${t.progress === 100 ? "bg-emerald-500" : "bg-sky-500"}`} style={{ width: `${t.progress}%` }} /></span><span className="text-[11px] font-bold">{t.progress}%</span>{t.open_issues > 0 && <AlertTriangle size={12} className="shrink-0 text-rose-500" />}</div>;
     case "number": return <span className="px-1.5 text-xs text-sub">{t.number_str}</span>;
     case "priority": return <select value={t.priority} onChange={(e) => patch(t, { priority: e.target.value })} className={`${ci} font-semibold`} data-testid={`list-priority-${t.id}`}>{Object.entries(PRIORITY).map(([p, v]) => <option key={p} value={p}>{v.name}</option>)}</select>;
     case "requestor_id": return <span className="block truncate px-1.5 text-xs">{userMap[t.requestor_id]?.name || "—"}</span>;
@@ -87,8 +88,8 @@ function AddRow({ span, onAdd, gkey }) {
   return <tr><td className="border-r p-0 text-center text-sub"><Plus size={13} className="mx-auto" /></td><td colSpan={span} className="p-0"><input value={v} onChange={(e) => setV(e.target.value)} onKeyDown={(e) => e.key === "Enter" && submit()} onBlur={submit} placeholder="Tambah baris baru — ketik judul lalu Enter" className="h-9 w-full bg-transparent px-3 text-xs outline-none placeholder:text-sub focus:bg-surface2" data-testid={`sheet-add-row-${gkey}`} /></td></tr>;
 }
 
-export default function ListView({ tasks, projects, onOpen, selected, setSelected, reload, groupBy }) {
-  const { prefs, savePrefs, ws, statuses, userMap, labelMap, me } = useApp();
+export default function ListView({ tasks, projects, onOpen, selected, setSelected, reload, groupBy, boardId }) {
+  const { prefs, savePrefs, ws, statuses, userMap, labelMap } = useApp();
   const [collapsed, setCollapsed] = useState({});
   const [sort, setSort] = useState({ k: "number", dir: 1 });
   const [limit, setLimit] = useState({});
@@ -109,7 +110,7 @@ export default function ListView({ tasks, projects, onOpen, selected, setSelecte
   }, [groupBy, sorted, statuses, userMap, labelMap]);
   const toggleSel = (id) => setSelected(selected.includes(id) ? selected.filter((x) => x !== id) : [...selected, id]);
   const addRow = async (key, title) => {
-    const body = { title, assignee_id: me.user_id };
+    const body = { title, ...(boardId ? { board_id: boardId } : {}) };
     if (groupBy === "status") body.status = key;
     if (groupBy === "assignee" && key !== "none") body.assignee_id = key;
     if (groupBy === "label" && key !== "none") body.label_ids = [key];

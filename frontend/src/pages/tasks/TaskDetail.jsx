@@ -9,13 +9,14 @@ import { Avatar, Spinner, fmtDate, rel, dueInfo } from "../../components/common"
 import RichEditor, { RichView } from "../../components/RichEditor";
 import { inp, UserSelect, PrioritySelect, LabelPicker, ItemPicker, ColorPicker, AttachmentList, useUploader, ListEditor } from "./fields";
 import { toDeadline } from "./TaskCreate";
+import Checkpoints, { CommentItem } from "./Checkpoints";
 
 function Row({ label, children }) {
   return <div className="grid items-center gap-1 sm:grid-cols-[120px_1fr] sm:gap-3"><span className="text-xs font-semibold text-sub">{label}</span><div className="min-w-0">{children}</div></div>;
 }
 
 function Comments({ t, reload }) {
-  const { userMap, users } = useApp();
+  const { users } = useApp();
   const [text, setText] = useState("");
   const send = async () => {
     const full = users.filter((u) => text.includes(`@${u.name}`));
@@ -24,7 +25,7 @@ function Comments({ t, reload }) {
   };
   return (
     <div data-testid="task-comments">
-      {t.comments.map((c) => <div key={c.id} className="mb-3 flex gap-2.5"><Avatar user={userMap[c.author_id]} size={28} showStatus={false} /><div className="min-w-0 flex-1 rounded-2xl bg-surface2 px-3 py-2"><p className="text-xs"><b>{userMap[c.author_id]?.name}</b> <span className="text-sub">{rel(c.created_at)}</span></p><p className="whitespace-pre-wrap text-sm">{c.text}</p></div></div>)}
+      {t.comments.map((c) => <CommentItem key={c.id} c={c} t={t} reload={reload} showCheckpoint />)}
       <div className="flex gap-2"><textarea value={text} onChange={(e) => setText(e.target.value)} placeholder="Write a comment… use @Name to mention" className="min-h-[44px] flex-1 rounded-xl border bg-surface2 p-2.5 text-sm outline-none" data-testid="task-comment-input" />
         <button onClick={send} disabled={!text.trim()} className="btn-accent flex h-11 w-11 items-center justify-center disabled:opacity-40" aria-label="Send comment" data-testid="task-comment-submit"><Send size={16} /></button></div>
     </div>
@@ -35,13 +36,14 @@ export default function TaskDetail({ id, onClose, onChanged }) {
   const { me, statuses, userMap, isManager } = useApp();
   const [t, setT] = useState(null);
   const [projects, setProjects] = useState([]);
+  const [boards, setBoards] = useState([]);
   const [editDesc, setEditDesc] = useState(false);
   const [desc, setDesc] = useState("");
   const [tab, setTab] = useState("comments");
   const [groups, setGroups] = useState(null);
   const navigate = useNavigate();
   const load = () => api.get(`/tasks/${id}`).then((r) => setT(r.data)).catch(() => { toast.error("Task not found"); onClose(); });
-  useEffect(() => { if (id) { setT(null); setEditDesc(false); load(); api.get("/projects").then((r) => setProjects(r.data)); } }, [id]); // eslint-disable-line
+  useEffect(() => { if (id) { setT(null); setEditDesc(false); load(); api.get("/projects").then((r) => setProjects(r.data)); api.get("/boards").then((r) => setBoards(r.data)); } }, [id]); // eslint-disable-line
   const patch = async (body, msg) => {
     try { const { data } = await api.patch(`/tasks/${id}`, body); setT(data); onChanged?.(); if (msg) toast.success(msg); } catch (e) { toast.error(errMsg(e)); }
   };
@@ -52,6 +54,7 @@ export default function TaskDetail({ id, onClose, onChanged }) {
   const ro = t && !t.can_edit;
   const d = t && dueInfo(t.deadline, done);
   const reviewer = t && (t.reviewer_id || t.requestor_id) === me.user_id;
+  const members = t?.board?.member_ids || [];
   return (
     <Sheet open={!!id} onOpenChange={(v) => !v && onClose()}>
       <SheetContent className="w-full overflow-y-auto bg-surface p-0 sm:max-w-2xl" data-testid="task-detail-panel">
@@ -72,10 +75,11 @@ export default function TaskDetail({ id, onClose, onChanged }) {
                 </div>
               )}
               <div className="space-y-3">
+                <Row label="Board"><select value={t.board_id || ""} disabled={ro} onChange={(e) => patch({ board_id: e.target.value }, "Task dipindah ke board lain")} className={inp} data-testid="task-detail-board">{!boards.some((b) => b.id === t.board_id) && t.board && <option value={t.board.id}>{t.board.name}</option>}{boards.map((b) => <option key={b.id} value={b.id}>{b.name}</option>)}</select></Row>
                 <Row label="Status"><select value={t.status} disabled={ro} onChange={(e) => patch({ status: e.target.value })} className={inp} data-testid="task-detail-status">{statuses.map((s) => <option key={s.key} value={s.key}>{s.name}</option>)}</select></Row>
                 <Row label="Requestor"><span className="flex items-center gap-2 text-sm"><Avatar user={userMap[t.requestor_id]} size={24} showStatus={false} />{userMap[t.requestor_id]?.name}</span></Row>
-                <Row label="Assignee"><UserSelect value={t.assignee_id} onChange={(v) => patch({ assignee_id: v })} testid="task-detail-assignee" /></Row>
-                <Row label="Reviewer"><UserSelect value={t.reviewer_id} onChange={(v) => patch({ reviewer_id: v })} placeholder="Requestor reviews" /></Row>
+                <Row label="Assignee"><UserSelect value={t.assignee_id} ids={members} onChange={(v) => patch({ assignee_id: v })} testid="task-detail-assignee" /></Row>
+                <Row label="Reviewer"><UserSelect value={t.reviewer_id} ids={members} onChange={(v) => patch({ reviewer_id: v })} placeholder="Requestor reviews" /></Row>
                 <Row label="Priority"><PrioritySelect value={t.priority} onChange={(v) => patch({ priority: v })} testid="task-detail-priority" /></Row>
                 <Row label="Deadline"><div className="flex items-center gap-2"><input type="datetime-local" disabled={ro} defaultValue={t.deadline ? fmtDate(t.deadline, "yyyy-MM-dd'T'HH:mm") : ""} key={t.deadline} onBlur={(e) => { const v = e.target.value ? new Date(e.target.value).toISOString() : null; if (v !== t.deadline) patch({ deadline: v }); }} className={inp} data-testid="task-detail-deadline" />{d && <span className={`whitespace-nowrap text-xs ${d.cls}`}>{d.state === "overdue" ? "Overdue" : d.state === "today" ? "Due today" : ""}</span>}</div></Row>
                 <Row label="Start date"><input type="date" disabled={ro} defaultValue={t.start_date || ""} key={`s${t.start_date}`} onBlur={(e) => e.target.value !== (t.start_date || "") && patch({ start_date: e.target.value || null })} className={inp} /></Row>
@@ -88,6 +92,7 @@ export default function TaskDetail({ id, onClose, onChanged }) {
                 <Row label="Card color"><ColorPicker value={t.card_color} onChange={(v) => patch({ card_color: v })} style={t.card_style} onStyle={(v) => patch({ card_style: v })} /></Row>
                 {t.estimate && <Row label="Estimate"><span className="text-sm">{t.estimate}</span></Row>}
               </div>
+              <Checkpoints t={t} ro={ro} patch={patch} reload={load} members={members} />
               <section>
                 <div className="mb-2 flex items-center justify-between"><h4 className="text-sm font-bold">Brief</h4>{!ro && <button onClick={() => { if (editDesc) patch({ description: desc }, "Description saved"); else setDesc(t.description || ""); setEditDesc(!editDesc); }} className="flex items-center gap-1 text-xs font-semibold text-brand" data-testid="task-edit-description-btn"><Pencil size={12} />{editDesc ? "Save" : "Edit"}</button>}</div>
                 {editDesc ? <RichEditor value={desc} onChange={setDesc} testid="task-detail-editor" /> : <RichView html={t.description} className="rounded-2xl bg-surface2 p-4" />}

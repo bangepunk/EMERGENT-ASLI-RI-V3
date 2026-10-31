@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Link, useNavigate, useParams } from "react-router-dom";
-import { Newspaper, Heart, MessageCircle, SmilePlus, ImagePlus, X, Trash2, ArrowLeft, BarChart3 } from "lucide-react";
+import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
+import { Newspaper, Heart, MessageCircle, SmilePlus, ImagePlus, X, Trash2, ArrowLeft, BarChart3, TrendingUp, Hash } from "lucide-react";
 import { toast } from "sonner";
 import { useApp } from "../context/AppContext";
 import { api, errMsg, fileUrl, uploadFile } from "../lib/api";
@@ -15,8 +15,13 @@ const esc = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 function RichText({ text, mentionIds }) {
   const { userMap } = useApp();
   const names = (mentionIds || []).map((id) => userMap[id]?.name).filter(Boolean);
-  if (!names.length) return text;
-  return text.split(new RegExp(`(@(?:${names.map(esc).join("|")}))`, "g")).map((part, i) => (i % 2 ? <span key={i} className="font-semibold text-brand">{part}</span> : part));
+  const tag = "(?<![\\w#])#\\w{1,40}";
+  const rx = new RegExp(names.length ? `(@(?:${names.map(esc).join("|")})|${tag})` : `(${tag})`, "g");
+  return text.split(rx).map((part, i) => {
+    if (!(i % 2)) return part;
+    if (part.startsWith("#")) return <Link key={i} to={`/beranda?tag=${encodeURIComponent(part.slice(1).toLowerCase())}`} className="font-semibold text-sky-600 hover:underline dark:text-sky-400" data-testid={`hashtag-${part.slice(1).toLowerCase()}`}>{part}</Link>;
+    return <span key={i} className="font-semibold text-brand">{part}</span>;
+  });
 }
 
 function Composer({ parentId, onPosted, placeholder = "Apa yang sedang terjadi?" }) {
@@ -104,26 +109,60 @@ function PostCard({ p, onChange, onDelete, reply }) {
           {!reply && <button onClick={() => navigate(`/beranda/${p.id}`)} className="flex h-8 items-center gap-1.5 rounded-full px-2 text-sm text-sub hover:text-ink" data-testid={`post-reply-btn-${p.id}`}><MessageCircle size={16} />{p.reply_count > 0 ? p.reply_count : "Balas"}</button>}
           <Reactions p={p} onChange={onChange} />
         </div>
+        {!reply && p.replies_preview?.length > 0 && (
+          <div className="mt-2 rounded-2xl bg-surface2/60 px-3" data-testid={`post-comments-${p.id}`}>
+            <div className="divide-y">{p.replies_preview.map((r) => <PostCard key={r.id} p={r} reply onChange={(nr) => onChange({ ...p, replies_preview: p.replies_preview.map((x) => (x.id === nr.id ? { ...x, ...nr } : x)) })} onDelete={(rid) => onChange({ ...p, reply_count: p.reply_count - 1, replies_preview: p.replies_preview.filter((x) => x.id !== rid) })} />)}</div>
+            {p.reply_count > p.replies_preview.length && <button onClick={() => navigate(`/beranda/${p.id}`)} className="w-full border-t py-2.5 text-left text-sm font-semibold text-brand" data-testid={`post-show-more-${p.id}`}>Lihat {p.reply_count - p.replies_preview.length} komentar lainnya</button>}
+          </div>
+        )}
       </div>
     </article>
   );
 }
 
-function Feed() {
+function Trending({ compact }) {
   const { subscribe } = useApp();
-  const [posts, setPosts] = useState(null);
-  const [more, setMore] = useState(true);
-  const load = useCallback(() => api.get("/posts").then((r) => { setPosts(r.data); setMore(r.data.length === 30); }), []);
+  const [items, setItems] = useState(null);
+  const [params] = useSearchParams();
+  const active = params.get("tag");
+  const load = useCallback(() => api.get("/posts/trending").then((r) => setItems(r.data)).catch(() => setItems([])), []);
   useEffect(() => { load(); }, [load]);
   useEffect(() => subscribe((e) => e.type === "posts:changed" && load()), [subscribe, load]);
-  const older = () => api.get("/posts", { params: { before: posts[posts.length - 1].created_at } }).then((r) => { setPosts([...posts, ...r.data]); setMore(r.data.length === 30); });
+  if (!items) return null;
+  if (compact) return items.length ? <div className="flex flex-wrap items-center gap-1.5" data-testid="trending-compact"><TrendingUp size={15} className="text-brand" />{items.slice(0, 6).map((t) => <Link key={t.tag} to={`/beranda?tag=${t.tag}`} className={`rounded-full border px-2.5 py-1 text-xs font-semibold ${active === t.tag ? "bg-ink text-[var(--c-surface)]" : "bg-surface"}`}>#{t.tag}</Link>)}</div> : null;
+  return (
+    <div className="card p-4" data-testid="trending-panel">
+      <h3 className="flex items-center gap-2 font-bold"><TrendingUp size={17} className="text-brand" />Trending</h3>
+      <p className="mb-3 text-xs text-sub">Hashtag paling ramai 7 hari terakhir</p>
+      {!items.length ? <p className="text-sm text-sub" data-testid="trending-empty">Belum ada hashtag. Coba tulis #namatopik di postinganmu.</p> : (
+        <ol className="space-y-0.5">{items.map((t, i) => (
+          <li key={t.tag}><Link to={`/beranda?tag=${t.tag}`} className={`flex items-center gap-3 rounded-xl px-2 py-2 hover:bg-surface2 ${active === t.tag ? "bg-surface2" : ""}`} data-testid={`trending-tag-${t.tag}`}>
+            <span className="w-4 text-xs font-bold text-sub">{i + 1}</span><span className="min-w-0 flex-1"><span className="block truncate font-semibold">#{t.tag}</span><span className="text-xs text-sub">{t.count} postingan</span></span>
+          </Link></li>))}</ol>
+      )}
+    </div>
+  );
+}
+
+function Feed() {
+  const { subscribe } = useApp();
+  const [params, setParams] = useSearchParams();
+  const tag = params.get("tag") || "";
+  const [posts, setPosts] = useState(null);
+  const [more, setMore] = useState(true);
+  const load = useCallback(() => api.get("/posts", { params: tag ? { tag } : {} }).then((r) => { setPosts(r.data); setMore(r.data.length === 30); }), [tag]);
+  useEffect(() => { setPosts(null); load(); }, [load]);
+  useEffect(() => subscribe((e) => e.type === "posts:changed" && load()), [subscribe, load]);
+  const older = () => api.get("/posts", { params: { before: posts[posts.length - 1].created_at, ...(tag ? { tag } : {}) } }).then((r) => { setPosts([...posts, ...r.data]); setMore(r.data.length === 30); });
   const upd = (np) => setPosts((ps) => ps.map((x) => (x.id === np.id ? { ...x, ...np } : x)));
   return (
     <>
       <PageHeader icon={Newspaper} title="Beranda" subtitle="Tempat berbagi kabar, ide, dan obrolan santai bareng semua orang di Internal." />
       <div className="space-y-4">
+        <div className="lg:hidden"><Trending compact /></div>
+        {tag && <div className="flex items-center gap-2 rounded-2xl bg-soft-blue px-4 py-3" data-testid="active-tag-filter"><Hash size={16} /><span className="flex-1 text-sm">Menampilkan postingan dengan <b>#{tag}</b></span><button onClick={() => { params.delete("tag"); setParams(params); }} className="flex items-center gap-1 text-sm font-semibold" data-testid="clear-tag-filter"><X size={14} />Hapus filter</button></div>}
         <Composer onPosted={(p) => setPosts((ps) => [p, ...(ps || []).filter((x) => x.id !== p.id)])} />
-        {!posts ? <Spinner /> : !posts.length ? <p className="py-10 text-center text-sm text-sub" data-testid="feed-empty">Belum ada postingan. Jadilah yang pertama!</p> : posts.map((p) => <PostCard key={p.id} p={p} onChange={upd} onDelete={(id) => setPosts((ps) => ps.filter((x) => x.id !== id))} />)}
+        {!posts ? <Spinner /> : !posts.length ? <p className="py-10 text-center text-sm text-sub" data-testid="feed-empty">{tag ? `Belum ada postingan dengan #${tag}.` : "Belum ada postingan. Jadilah yang pertama!"}</p> : posts.map((p) => <PostCard key={p.id} p={p} onChange={upd} onDelete={(id) => setPosts((ps) => ps.filter((x) => x.id !== id))} />)}
         {posts?.length > 0 && more && <button onClick={older} className="w-full py-3 text-sm font-semibold text-brand" data-testid="feed-load-more">Muat lebih banyak</button>}
       </div>
     </>
@@ -156,5 +195,12 @@ function Thread({ pid }) {
 
 export default function Beranda() {
   const { pid } = useParams();
-  return <div className="mx-auto max-w-2xl px-4 py-6 sm:px-6 lg:py-10" data-testid="beranda-page">{pid ? <Thread pid={pid} /> : <Feed />}</div>;
+  return (
+    <div className="mx-auto max-w-5xl px-4 py-6 sm:px-6 lg:py-10" data-testid="beranda-page">
+      <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_280px]">
+        <div className="min-w-0">{pid ? <Thread pid={pid} /> : <Feed />}</div>
+        <aside className="hidden lg:block"><div className="sticky top-6"><Trending /></div></aside>
+      </div>
+    </div>
+  );
 }

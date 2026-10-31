@@ -7,7 +7,7 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle } from "../../components/u
 import RichEditor from "../../components/RichEditor";
 import { inp, UserSelect, PrioritySelect, LabelPicker, ItemPicker, ColorPicker, AttachmentList, useUploader, ListEditor } from "./fields";
 
-const blank = (me, d = {}) => ({ title: "", description: "", assignee_id: null, priority: "medium", deadline_date: "", deadline_time: "", start_date: "", project_id: d.project_id || "", department: me.department || "", label_ids: d.label_ids || [], item_type: null, link_url: "", collaborator_ids: [], checklist: [], subtasks: [], links: [], attachments: [], estimate: "", card_color: null, card_style: "accent", custom: {}, status: d.status });
+const blank = (me, d = {}) => ({ title: "", description: "", assignee_id: null, priority: "medium", deadline_date: "", deadline_time: "", start_date: "", project_id: d.project_id || "", department: me.department || "", board_id: d.board_id || "", label_ids: d.label_ids || [], item_type: null, link_url: "", collaborator_ids: [], checklist: [], subtasks: [], links: [], attachments: [], estimate: "", card_color: null, card_style: "accent", custom: {}, status: d.status });
 
 function Row({ label, children }) {
   return <div className="grid items-start gap-1 sm:grid-cols-[130px_1fr] sm:gap-3"><span className="pt-2.5 text-xs font-semibold text-sub">{label}</span><div className="min-w-0">{children}</div></div>;
@@ -22,12 +22,14 @@ export default function TaskCreate({ open, onOpenChange, preset, defaults, onCre
   const { me, ws, users } = useApp();
   const [f, setF] = useState(blank(me));
   const [projects, setProjects] = useState([]);
+  const [boards, setBoards] = useState([]);
   const [link, setLink] = useState("");
   const [more, setMore] = useState(false);
   const [busy, setBusy] = useState(false);
   const setAtt = (fn) => setF((x) => ({ ...x, attachments: fn(x.attachments) }));
   const { pick, input } = useUploader(setAtt);
-  useEffect(() => { if (open) { setF({ ...blank(me, defaults), ...(preset || {}) }); setMore(false); api.get("/projects").then((r) => setProjects(r.data)); } }, [open]); // eslint-disable-line
+  useEffect(() => { if (open) { setF({ ...blank(me, defaults), ...(preset || {}) }); setMore(false); api.get("/projects").then((r) => setProjects(r.data)); api.get("/boards").then((r) => { setBoards(r.data); setF((x) => ({ ...x, board_id: x.board_id || r.data[0]?.id || "" })); }); } }, [open]); // eslint-disable-line
+  const members = boards.find((b) => b.id === f.board_id)?.member_ids || [];
   const set = (k) => (v) => setF((x) => ({ ...x, [k]: v?.target ? v.target.value : v }));
   const submit = async (e) => {
     e?.preventDefault();
@@ -51,7 +53,8 @@ export default function TaskCreate({ open, onOpenChange, preset, defaults, onCre
             <input autoFocus value={f.title} onChange={set("title")} placeholder="Task title" className="w-full bg-transparent text-2xl font-bold outline-none placeholder:text-sub" data-testid="task-title-input" />
             <RichEditor value={f.description} onChange={set("description")} testid="task-description-editor" />
             <Row label="Requestor"><div className={`${inp} flex items-center`}>{me.name} (you)</div></Row>
-            <Row label="Assignee"><UserSelect value={f.assignee_id} onChange={set("assignee_id")} testid="task-assignee-select" /></Row>
+            <Row label="Board"><select value={f.board_id || ""} onChange={(e) => setF((x) => ({ ...x, board_id: e.target.value, assignee_id: null }))} className={inp} data-testid="task-board-select">{!boards.length && <option value="">Belum ada board</option>}{boards.map((b) => <option key={b.id} value={b.id}>{b.name}</option>)}</select></Row>
+            <Row label="Assignee"><UserSelect value={f.assignee_id} onChange={set("assignee_id")} ids={members} testid="task-assignee-select" /></Row>
             <Row label="Priority"><PrioritySelect value={f.priority} onChange={set("priority")} testid="task-priority-select" /></Row>
             <Row label="Deadline"><div className="flex gap-2"><input type="date" value={f.deadline_date} onChange={set("deadline_date")} className={inp} data-testid="task-deadline-input" /><input type="time" value={f.deadline_time} onChange={set("deadline_time")} className={`${inp} w-32`} data-testid="task-deadline-time-input" /></div></Row>
             <Row label="IP / Brand"><LabelPicker value={f.label_ids} onChange={set("label_ids")} testid="task-label-picker" /></Row>

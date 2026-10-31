@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { useSearchParams } from "react-router-dom";
-import { CheckSquare, Plus, Search, Download, KanbanSquare, List, GanttChart, CalendarDays, SlidersHorizontal, X } from "lucide-react";
+import { CheckSquare, Plus, Search, Download, KanbanSquare, List, GanttChart, CalendarDays, SlidersHorizontal, X, Settings2 } from "lucide-react";
 import { toast } from "sonner";
 import { api, errMsg, downloadFrom } from "../lib/api";
 import { useApp } from "../context/AppContext";
@@ -11,14 +11,18 @@ import ListView from "./tasks/ListView";
 import { Timeline, Calendar } from "./tasks/TimelineCalendar";
 import TaskCreate from "./tasks/TaskCreate";
 import TaskDetail from "./tasks/TaskDetail";
+import BoardDialog from "./tasks/BoardDialog";
 
-export const SAVED_VIEWS = [["all", "All Tasks"], ["active", "Active"], ["my", "My Tasks"], ["requested", "Requested by Me"], ["assigned", "Assigned to Me"], ["today", "Due Today"], ["upcoming", "Upcoming"], ["overdue", "Overdue"], ["completed", "Completed"], ["archived", "Archived"]];
+export const SAVED_VIEWS = [["all", "All Tasks"], ["active", "Active"], ["my", "My Tasks"], ["requested", "Requested by Me"], ["assigned", "Assigned to Me"], ["today", "Due Today"], ["upcoming", "Upcoming"], ["overdue", "Overdue"], ["issues", "Ada Kendala"], ["completed", "Completed"], ["archived", "Archived"]];
 const VIEWS = [["board", "Board", KanbanSquare], ["list", "List", List], ["timeline", "Timeline", GanttChart], ["calendar", "Calendar", CalendarDays]];
 const sel = "h-10 rounded-full border bg-surface px-3 text-sm";
 
 export function TaskWorkspace({ projectId, compactHeader }) {
-  const { users, labels, statuses, subscribe, prefs, savePrefs } = useApp();
+  const { users, labels, statuses, subscribe, prefs, savePrefs, isManager } = useApp();
   const [params, setParams] = useSearchParams();
+  const [boards, setBoards] = useState(null);
+  const [boardId, setBoardId] = useState(params.get("board") || "");
+  const [editBoard, setEditBoard] = useState(null);
   const [tasks, setTasks] = useState(null);
   const [projects, setProjects] = useState({});
   const [saved, setSaved] = useState(params.get("view") || "all");
@@ -29,7 +33,12 @@ export function TaskWorkspace({ projectId, compactHeader }) {
   const [create, setCreate] = useState(null);
   const [showFilters, setShowFilters] = useState(false);
   const openId = params.get("task");
-  const query = useCallback(() => ({ view: saved, ...Object.fromEntries(Object.entries(f).filter(([, v]) => v)), ...(projectId ? { project_id: projectId } : {}) }), [saved, f, projectId]);
+  const query = useCallback(() => ({ view: saved, ...Object.fromEntries(Object.entries(f).filter(([, v]) => v)), ...(projectId ? { project_id: projectId } : {}), ...(boardId ? { board_id: boardId } : {}) }), [saved, f, projectId, boardId]);
+  const loadBoards = useCallback(() => api.get("/boards").then((r) => setBoards(r.data)).catch(() => setBoards([])), []);
+  useEffect(() => { loadBoards(); }, [loadBoards]);
+  useEffect(() => subscribe((e) => e.type === "tasks:changed" && loadBoards()), [subscribe, loadBoards]);
+  const pickBoard = (id) => { setBoardId(id); setSelected([]); if (id) params.set("board", id); else params.delete("board"); setParams(params); };
+  const newTask = (extra = {}) => (boards?.length ? setCreate({ board_id: boardId, ...extra }) : toast.error("Kamu belum diundang ke board mana pun"));
   const load = useCallback(() => api.get("/tasks", { params: query() }).then((r) => setTasks(r.data)).catch(() => setTasks([])), [query]);
   useEffect(() => { const t = setTimeout(load, 200); return () => clearTimeout(t); }, [load]);
   useEffect(() => { api.get("/projects").then((r) => setProjects(Object.fromEntries(r.data.map((p) => [p.id, p])))); }, []);
@@ -51,8 +60,23 @@ export function TaskWorkspace({ projectId, compactHeader }) {
       {!compactHeader && <PageHeader icon={CheckSquare} title="Tasks" subtitle="One shared task database across board, list, timeline and calendar." actions={<>
         <DropdownMenu><DropdownMenuTrigger asChild><GhostButton data-testid="export-menu-btn"><Download size={15} />Export</GhostButton></DropdownMenuTrigger>
           <DropdownMenuContent className="bg-surface" align="end"><DropdownMenuItem onClick={() => exp("csv")} data-testid="export-csv-btn">Export CSV (current filters)</DropdownMenuItem>{selected.length > 0 && <DropdownMenuItem onClick={() => exp("csv", selected)} data-testid="export-selected-btn">Export selected ({selected.length})</DropdownMenuItem>}<DropdownMenuItem onClick={() => exp("json")} data-testid="export-json-btn">Export JSON</DropdownMenuItem></DropdownMenuContent></DropdownMenu>
-        <AccentButton onClick={() => setCreate({})} data-testid="new-task-btn"><Plus size={16} />New Task</AccentButton></>} />}
-      {compactHeader && <div className="mb-4 flex justify-end gap-2"><GhostButton onClick={() => exp("csv")} data-testid="export-csv-btn"><Download size={15} />CSV</GhostButton><AccentButton onClick={() => setCreate({})} data-testid="new-task-btn"><Plus size={16} />New Task</AccentButton></div>}
+        <AccentButton onClick={() => newTask()} data-testid="new-task-btn"><Plus size={16} />New Task</AccentButton></>} />}
+      {compactHeader && <div className="mb-4 flex justify-end gap-2"><GhostButton onClick={() => exp("csv")} data-testid="export-csv-btn"><Download size={15} />CSV</GhostButton><AccentButton onClick={() => newTask()} data-testid="new-task-btn"><Plus size={16} />New Task</AccentButton></div>}
+      {!projectId && boards && (
+        <div className="mb-4" data-testid="board-switcher">
+          <div className="flex flex-wrap items-center gap-2">
+            <button onClick={() => pickBoard("")} className={`h-10 rounded-2xl px-4 text-sm font-semibold ${!boardId ? "bg-ink text-[var(--c-surface)]" : "border bg-surface text-sub"}`} data-testid="board-all">Semua board</button>
+            {boards.map((b) => (
+              <div key={b.id} className={`flex h-10 items-center rounded-2xl border pl-3 ${boardId === b.id ? "border-transparent text-[#20283B]" : "bg-surface"}`} style={boardId === b.id ? { background: b.color } : undefined}>
+                <button onClick={() => pickBoard(b.id)} className="flex items-center gap-2 pr-3 text-sm font-semibold" data-testid={`board-tab-${b.id}`}>{boardId !== b.id && <span className="h-2.5 w-2.5 rounded-full" style={{ background: b.color }} />}{b.name}<span className="rounded-full bg-surface/70 px-1.5 text-xs">{b.task_count}</span></button>
+                {isManager && <button onClick={() => setEditBoard(b)} className="flex h-full items-center border-l border-black/10 px-2 opacity-70 hover:opacity-100" aria-label={`Atur ${b.name}`} data-testid={`board-edit-${b.id}`}><Settings2 size={14} /></button>}
+              </div>))}
+            {isManager && <button onClick={() => setEditBoard({})} className="flex h-10 items-center gap-1 rounded-2xl border border-dashed px-3 text-sm font-semibold text-brand" data-testid="board-new-btn"><Plus size={14} />Board</button>}
+          </div>
+          {!boards.length && <p className="mt-3 rounded-2xl bg-soft-yellow p-4 text-sm" data-testid="no-boards-msg">Kamu belum diundang ke board mana pun. Minta admin atau manager divisimu untuk mengundangmu.</p>}
+        </div>
+      )}
+      {editBoard && <BoardDialog board={editBoard} onClose={() => setEditBoard(null)} onSaved={(b) => { loadBoards(); load(); if (!b && editBoard.id === boardId) pickBoard(""); }} />}
       <div className="mb-4 flex flex-wrap gap-1.5" data-testid="saved-views">
         {SAVED_VIEWS.map(([k, l]) => <button key={k} onClick={() => { setSaved(k); setSelected([]); }} className={`h-9 whitespace-nowrap rounded-full px-3.5 text-sm font-medium ${saved === k ? "bg-ink text-[var(--c-surface)]" : "border bg-surface text-sub"}`} data-testid={`saved-view-${k}`}>{l}</button>)}
       </div>
@@ -80,8 +104,8 @@ export function TaskWorkspace({ projectId, compactHeader }) {
           <button onClick={() => setSelected([])} className="ml-auto text-sub" aria-label="Clear selection"><X size={16} /></button>
         </div>
       )}
-      {!tasks ? <Spinner /> : view === "board" ? <Board tasks={tasks} onOpen={open} onNew={(status) => setCreate({ status })} reload={load} />
-        : view === "list" ? <ListView tasks={tasks} projects={projects} onOpen={open} selected={selected} setSelected={setSelected} reload={load} groupBy={groupBy} />
+      {!tasks ? <Spinner /> : view === "board" ? <Board tasks={tasks} onOpen={open} onNew={(status) => newTask({ status })} reload={load} />
+        : view === "list" ? <ListView tasks={tasks} projects={projects} onOpen={open} selected={selected} setSelected={setSelected} reload={load} groupBy={groupBy} boardId={boardId} />
         : view === "timeline" ? <Timeline tasks={tasks} onOpen={open} /> : <Calendar tasks={tasks} onOpen={open} />}
       <TaskCreate open={!!create} onOpenChange={(v) => !v && setCreate(null)} defaults={{ ...create, project_id: projectId }} onCreated={load} />
       <TaskDetail id={openId} onClose={close} onChanged={load} />

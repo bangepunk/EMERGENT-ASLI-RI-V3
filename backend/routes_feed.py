@@ -1,9 +1,23 @@
+import re
+from datetime import datetime, timezone, timedelta
 from fastapi import APIRouter, HTTPException, Depends, Body, Query
 from core import db, now_iso, new_id, get_user, is_admin, notify, manager
 
 router = APIRouter(prefix="/api")
 P = {"_id": 0}
 EMOJIS = ["👍", "❤️", "😂", "🎉", "😮", "🙏"]
+
+
+TAG_RX = re.compile(r"(?<![\w#])#(\w{1,40})")
+
+
+def tags_of(text):
+    return list(dict.fromkeys(t.lower() for t in TAG_RX.findall(text or "")))[:15]
+
+
+async def backfill_tags():
+    async for p in db.posts.find({"tags": {"$exists": False}}, {"id": 1, "text": 1}):
+        await db.posts.update_one({"id": p["id"]}, {"$set": {"tags": tags_of(p.get("text"))}})
 
 
 def shape(p, u):
@@ -28,12 +42,30 @@ def thread_link(p):
 
 
 @router.get("/posts")
-async def list_posts(before: str = Query(None), u=Depends(get_user)):
+async def list_posts(before: str = Query(None), tag: str = Query(None), u=Depends(get_user)):
     q = {"workspace_id": u["workspace_id"], "parent_id": None, "deleted": {"$ne": True}}
     if before:
         q["created_at"] = {"$lt": before}
+    if tag:
+        t = tag.lstrip("#").lower()
+        roots = await db.posts.distinct("parent_id", {"workspace_id": u["workspace_id"], "tags": t, "parent_id": {"$ne": None}, "deleted": {"$ne": True}})
+        q["$or"] = [{"tags": t}, {"id": {"$in": roots}}]
     items = await db.posts.find(q, P).sort("created_at", -1).limit(30).to_list(30)
-    return [shape(p, u) for p in items]
+    replies = await db.posts.find({"parent_id": {"$in": [p["id"] for p in items]}, "deleted": {"$ne": True}}, P).sort("created_at", 1).to_list(5000)
+    by = {}
+    for r in replies:
+        by.setdefault(r["parent_id"], []).append(r)
+    return [{**shape(p, u), "replies_preview": [shape(r, u) for r in by.get(p["id"], [])[:5]]} for p in items]
+
+
+@router.get("/posts/trending")
+async def trending(u=Depends(get_user)):
+    since = (datetime.now(timezone.utc) - timedelta(days=7)).isoformat()
+    rows = await db.posts.aggregate([
+        {"$match": {"workspace_id": u["workspace_id"], "deleted": {"$ne": True}, "created_at": {"$gte": since}, "tags.0": {"$exists": True}}},
+        {"$unwind": "$tags"}, {"$group": {"_id": "$tags", "count": {"$sum": 1}, "last": {"$max": "$created_at"}}},
+        {"$sort": {"count": -1, "last": -1}}, {"$limit": 10}]).to_list(10)
+    return [{"tag": r["_id"], "count": r["count"]} for r in rows]
 
 
 @router.get("/posts/{pid}")
@@ -71,7 +103,7 @@ async def create_post(body: dict = Body(...), u=Depends(get_user)):
                 "anonymous": bool(pb.get("anonymous")), "allow_change": pb.get("allow_change", True) is not False,
                 "expires_at": pb.get("expires_at") or None, "closed": False, "created_by": u["user_id"], "created_at": now_iso()}
     mentions = [x["user_id"] async for x in db.users.find({"workspace_id": ws, "status": "active", "user_id": {"$in": body.get("mention_ids") or []}}, {"user_id": 1})]
-    p = {"id": new_id("post"), "workspace_id": ws, "author_id": u["user_id"], "text": text, "attachments": atts, "mention_ids": mentions,
+    p = {"id": new_id("post"), "workspace_id": ws, "author_id": u["user_id"], "text": text, "attachments": atts, "mention_ids": mentions, "tags": tags_of(text),
          "parent_id": parent["id"] if parent else None, "poll_id": poll["id"] if poll else None, "likes": [], "reactions": {}, "reply_count": 0, "created_at": now_iso()}
     if poll:
         poll["post_id"] = p["id"]

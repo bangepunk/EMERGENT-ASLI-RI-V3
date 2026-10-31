@@ -198,6 +198,7 @@ async def audit_logs(u=Depends(get_user)):
 @router.get("/search")
 async def search(q: str = Query(..., min_length=1), u=Depends(get_user)):
     import re
+    from routes_tasks import scoped
     rx = {"$regex": re.escape(q), "$options": "i"}
     w = u["workspace_id"]
     convs = await db.conversations.find({"workspace_id": w, "deleted": {"$ne": True}, "$or": [{"member_ids": u["user_id"]}, {"type": "group", "group_type": {"$ne": "private"}}]}, {"_id": 0, "id": 1, "name": 1, "type": 1, "member_ids": 1, "group_type": 1, "description": 1, "archived": 1}).to_list(1000)
@@ -209,5 +210,5 @@ async def search(q: str = Query(..., min_length=1), u=Depends(get_user)):
             "messages": await db.messages.find({"conversation_id": {"$in": member_ids}, "text": rx, "deleted": {"$ne": True}}, {"_id": 0, "id": 1, "text": 1, "conversation_id": 1, "sender_id": 1, "created_at": 1}).sort("created_at", -1).limit(10).to_list(10),
             "groups": groups,
             "projects": await db.projects.find({"workspace_id": w, "name": rx}, {"_id": 0, "id": 1, "name": 1, "status": 1}).limit(6).to_list(6),
-            "tasks": await db.tasks.find({"workspace_id": w, "archived": {"$ne": True}, "$or": [{"title": rx}, {"number_str": rx}]}, {"_id": 0, "id": 1, "title": 1, "number_str": 1, "status": 1}).limit(10).to_list(10),
+            "tasks": await db.tasks.find(await scoped(u, {"workspace_id": w, "archived": {"$ne": True}, "$or": [{"title": rx}, {"number_str": rx}]}), {"_id": 0, "id": 1, "title": 1, "number_str": 1, "status": 1}).limit(10).to_list(10),
             "polls": await db.polls.find({"conversation_id": {"$in": member_ids}, "question": rx}, {"_id": 0, "id": 1, "question": 1, "conversation_id": 1}).limit(6).to_list(6)}

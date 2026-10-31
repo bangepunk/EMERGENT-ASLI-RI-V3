@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { MessageSquare, Paperclip, ListChecks, Plus } from "lucide-react";
+import { MessageSquare, Paperclip, ListChecks, Plus, AlertTriangle } from "lucide-react";
 import { toast } from "sonner";
 import { api, errMsg } from "../../lib/api";
 import { useApp } from "../../context/AppContext";
@@ -19,10 +19,12 @@ export function TaskCard({ t, onOpen, done, draggable, onDragStart }) {
       <div className="flex items-start justify-between gap-2"><span className="text-[10px] font-semibold text-sub">{t.number_str}</span><PriorityBadge value={t.priority} /></div>
       <p className={`mt-1.5 text-sm font-semibold leading-snug ${done ? "line-through text-sub" : ""}`}>{t.title}</p>
       {t.label_ids?.length > 0 && <div className="mt-2"><Labels ids={t.label_ids} small /></div>}
+      {t.checkpoints?.length > 0 && <div className="mt-2.5 flex items-center gap-2" data-testid={`card-progress-${t.id}`}><span className="block h-1.5 flex-1 overflow-hidden rounded-full bg-surface2"><span className={`block h-full rounded-full ${t.progress === 100 ? "bg-emerald-500" : "bg-sky-500"}`} style={{ width: `${t.progress || 0}%` }} /></span><span className="text-[11px] font-bold">{t.progress || 0}%</span></div>}
       <div className="mt-3 flex items-center gap-2.5 text-[11px] text-sub">
         {t.assignee_id ? <Avatar user={userMap[t.assignee_id]} size={22} showStatus={false} /> : <span className="h-[22px] w-[22px] rounded-full border border-dashed" />}
         {d && <span className={d.cls}>{d.text}</span>}
         <span className="ml-auto flex items-center gap-2">
+          {t.open_issues > 0 && <span className="flex items-center gap-0.5 font-bold text-rose-500" data-testid={`card-issue-indicator-${t.id}`}><AlertTriangle size={11} />{t.open_issues}</span>}
           {t.comment_count > 0 && <span className="flex items-center gap-0.5"><MessageSquare size={11} />{t.comment_count}</span>}
           {t.attachments?.length > 0 && <span className="flex items-center gap-0.5" data-testid="card-attachment-indicator"><Paperclip size={11} />{t.attachments.length}</span>}
           {sub && <span className="flex items-center gap-0.5"><ListChecks size={11} />{sub}</span>}

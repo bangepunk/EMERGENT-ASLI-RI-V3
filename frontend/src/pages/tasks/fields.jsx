@@ -9,9 +9,10 @@ import { Popover, PopoverContent, PopoverTrigger } from "../../components/ui/pop
 export const CARD_COLORS = ["#FF5364", "#F59E0B", "#EAB308", "#22C55E", "#0EA5A4", "#2F7DE1", "#8B5CF6", "#EC4899", "#64748B"];
 export const inp = "h-10 w-full rounded-xl border bg-surface2 px-3 text-sm outline-none";
 
-export function UserSelect({ value, onChange, placeholder = "Unassigned", testid }) {
+export function UserSelect({ value, onChange, placeholder = "Unassigned", testid, ids }) {
   const { users } = useApp();
-  return <select value={value || ""} onChange={(e) => onChange(e.target.value || null)} className={inp} data-testid={testid}><option value="">{placeholder}</option>{users.map((u) => <option key={u.user_id} value={u.user_id}>{u.name}</option>)}</select>;
+  const list = ids ? users.filter((u) => ids.includes(u.user_id) || u.user_id === value) : users;
+  return <select value={value || ""} onChange={(e) => onChange(e.target.value || null)} className={inp} data-testid={testid}><option value="">{placeholder}</option>{list.map((u) => <option key={u.user_id} value={u.user_id}>{u.name}</option>)}</select>;
 }
 
 export function PrioritySelect({ value, onChange, testid }) {
