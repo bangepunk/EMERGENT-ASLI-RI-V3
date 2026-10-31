@@ -42,6 +42,7 @@ Creative, marketing, product teams, management; workspace admins.
 - Dashboard widget "Statistik Bulanan" (GET /api/stats/monthly): employee own only, manager/admin all + per-employee filter
 - Beranda forum (/beranda, routes_feed.py): posts, photos, @mention, like, emoji reactions, replies thread, delete (author/admin), live via websocket, notifications category "beranda"
 - Notification panel docked in layout (no overlap); toasts moved to top-center
+- Beranda polling (2026-10-31): composer "Polling" button reuses CreatePollDialog; poll stored in db.polls with post_id (conversation_id None), voted by whole workspace, live poll:update to all online users; chat polls unchanged
 
 ## Backlog
 - P1: shadcn date pickers instead of native inputs; TURN server for calls behind strict NATs; true browser push (service worker) when tab closed; link previews for URLs.

@@ -54,14 +54,28 @@ async def create_post(body: dict = Body(...), u=Depends(get_user)):
         f = await db.files.find_one({"id": a.get("id"), "workspace_id": ws, "content_type": {"$regex": "^image/"}}, P)
         if f:
             atts.append({"id": f["id"], "name": f["name"], "content_type": f["content_type"]})
-    if not text and not atts:
+    if not text and not atts and not body.get("poll"):
         raise HTTPException(400, "Tulis sesuatu atau lampirkan foto")
     parent = await load(body["parent_id"], u) if body.get("parent_id") else None
     if parent and parent.get("parent_id"):
         parent = await load(parent["parent_id"], u)
+    poll = None
+    if body.get("poll") and not parent:
+        pb = body["poll"]
+        q = (pb.get("question") or "").strip()
+        opts = [o.strip() for o in pb.get("options", []) if o and o.strip()]
+        if not q or len(opts) < 2:
+            raise HTTPException(400, "Polling butuh pertanyaan dan minimal 2 pilihan")
+        poll = {"id": new_id("poll"), "workspace_id": ws, "conversation_id": None, "question": q[:300],
+                "options": [{"id": new_id("opt"), "text": o[:200]} for o in opts[:12]], "multiple": bool(pb.get("multiple")),
+                "anonymous": bool(pb.get("anonymous")), "allow_change": pb.get("allow_change", True) is not False,
+                "expires_at": pb.get("expires_at") or None, "closed": False, "created_by": u["user_id"], "created_at": now_iso()}
     mentions = [x["user_id"] async for x in db.users.find({"workspace_id": ws, "status": "active", "user_id": {"$in": body.get("mention_ids") or []}}, {"user_id": 1})]
     p = {"id": new_id("post"), "workspace_id": ws, "author_id": u["user_id"], "text": text, "attachments": atts, "mention_ids": mentions,
-         "parent_id": parent["id"] if parent else None, "likes": [], "reactions": {}, "reply_count": 0, "created_at": now_iso()}
+         "parent_id": parent["id"] if parent else None, "poll_id": poll["id"] if poll else None, "likes": [], "reactions": {}, "reply_count": 0, "created_at": now_iso()}
+    if poll:
+        poll["post_id"] = p["id"]
+        await db.polls.insert_one(dict(poll))
     await db.posts.insert_one(dict(p))
     link = thread_link(p)
     if parent:

@@ -5,7 +5,7 @@ import { api, errMsg } from "../../lib/api";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "../../components/ui/dialog";
 import { Switch } from "../../components/ui/switch";
 
-export default function CreatePollDialog({ open, onOpenChange, conversationId, onCreated }) {
+export default function CreatePollDialog({ open, onOpenChange, conversationId, onCreated, onSubmitPoll }) {
   const [q, setQ] = useState("");
   const [opts, setOpts] = useState(["", ""]);
   const [flags, setFlags] = useState({ multiple: false, anonymous: false, allow_change: true });
@@ -14,8 +14,9 @@ export default function CreatePollDialog({ open, onOpenChange, conversationId, o
   const submit = async () => {
     setBusy(true);
     try {
-      await api.post(`/conversations/${conversationId}/polls`, { question: q, options: opts, ...flags, expires_at: exp ? new Date(exp).toISOString() : null });
-      toast.success("Poll created");
+      const payload = { question: q, options: opts, ...flags, expires_at: exp ? new Date(exp).toISOString() : null };
+      if (onSubmitPoll) await onSubmitPoll(payload);
+      else { await api.post(`/conversations/${conversationId}/polls`, payload); toast.success("Poll created"); }
       setQ(""); setOpts(["", ""]); setExp("");
       onOpenChange(false);
       onCreated?.();

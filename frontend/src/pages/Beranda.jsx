@@ -1,11 +1,13 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
-import { Newspaper, Heart, MessageCircle, SmilePlus, ImagePlus, X, Trash2, ArrowLeft } from "lucide-react";
+import { Newspaper, Heart, MessageCircle, SmilePlus, ImagePlus, X, Trash2, ArrowLeft, BarChart3 } from "lucide-react";
 import { toast } from "sonner";
 import { useApp } from "../context/AppContext";
 import { api, errMsg, fileUrl, uploadFile } from "../lib/api";
 import { Avatar, PageHeader, Spinner, rel } from "../components/common";
 import { Popover, PopoverContent, PopoverTrigger } from "../components/ui/popover";
+import PollCard from "./chat/PollCard";
+import CreatePollDialog from "./chat/CreatePollDialog";
 
 const EMOJIS = ["👍", "❤️", "😂", "🎉", "😮", "🙏"];
 const esc = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
@@ -24,7 +26,7 @@ function Composer({ parentId, onPosted, placeholder = "Apa yang sedang terjadi?"
   const [mentions, setMentions] = useState([]);
   const [mq, setMq] = useState(null);
   const [busy, setBusy] = useState(false);
-  const ta = useRef(null);
+  const [pollOpen, setPollOpen] = useState(false);
   const fileRef = useRef(null);
   const sugg = mq === null ? [] : users.filter((u) => u.user_id !== me.user_id && u.name.toLowerCase().includes(mq)).slice(0, 6);
   const onChange = (e) => { setText(e.target.value); const m = e.target.value.slice(0, e.target.selectionStart).match(/@([\w]*)$/); setMq(m ? m[1].toLowerCase() : null); };
@@ -35,27 +37,33 @@ function Composer({ parentId, onPosted, placeholder = "Apa yang sedang terjadi?"
       try { const up = await uploadFile(f); setFiles((x) => [...x, up]); } catch (er) { toast.error(errMsg(er)); }
     }
   };
-  const submit = async () => {
-    if (busy || (!text.trim() && !files.length)) return;
+  const submit = async (poll) => {
+    if (busy || (!poll && !text.trim() && !files.length)) return;
     setBusy(true);
     try {
-      const { data } = await api.post("/posts", { text, parent_id: parentId || null, attachments: files.map((f) => ({ id: f.id })), mention_ids: mentions.filter((m) => text.includes(`@${userMap[m]?.name}`)) });
+      const { data } = await api.post("/posts", { text, poll: poll || undefined, parent_id: parentId || null, attachments: files.map((f) => ({ id: f.id })), mention_ids: mentions.filter((m) => text.includes(`@${userMap[m]?.name}`)) });
       setText(""); setFiles([]); setMentions([]); onPosted?.(data);
-    } catch (er) { toast.error(errMsg(er)); }
+    } catch (er) { setBusy(false); throw er; }
     setBusy(false);
   };
+  const send = () => submit().catch((er) => toast.error(errMsg(er)));
+  const ta = useRef(null);
   return (
     <div className="card relative p-4" data-testid={parentId ? "reply-composer" : "post-composer"}>
       <div className="flex gap-3">
         <Avatar user={me} size={38} showStatus={false} />
         <div className="min-w-0 flex-1">
-          <textarea ref={ta} value={text} onChange={onChange} onKeyDown={(e) => { if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) submit(); }} rows={parentId ? 2 : 3} placeholder={placeholder} className="w-full resize-none bg-transparent text-[15px] outline-none placeholder:text-sub" data-testid="post-text-input" />
+          <textarea ref={ta} value={text} onChange={onChange} onKeyDown={(e) => { if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) send(); }} rows={parentId ? 2 : 3} placeholder={placeholder} className="w-full resize-none bg-transparent text-[15px] outline-none placeholder:text-sub" data-testid="post-text-input" />
           {sugg.length > 0 && <div className="absolute left-16 z-20 w-64 rounded-xl border bg-surface p-1 shadow-lg" data-testid="post-mention-suggestions">{sugg.map((u) => <button key={u.user_id} onClick={() => pick(u)} className="flex w-full items-center gap-2 rounded-lg p-1.5 text-sm hover:bg-surface2" data-testid={`post-mention-${u.user_id}`}><Avatar user={u} size={22} showStatus={false} />{u.name}</button>)}</div>}
           {files.length > 0 && <div className="mt-2 flex flex-wrap gap-2">{files.map((f) => <div key={f.id} className="relative"><img src={fileUrl(f.id)} alt={f.name} className="h-20 w-20 rounded-xl object-cover" /><button onClick={() => setFiles(files.filter((x) => x.id !== f.id))} className="absolute -right-1.5 -top-1.5 rounded-full bg-ink p-0.5 text-[var(--c-surface)]" aria-label="Hapus foto"><X size={11} /></button></div>)}</div>}
           <div className="mt-2 flex items-center justify-between border-t pt-2">
-            <button onClick={() => fileRef.current.click()} className="btn-ghost flex h-9 items-center gap-1.5 px-2 text-sm text-sub" data-testid="post-add-photo-btn"><ImagePlus size={17} />Foto</button>
+            <div className="flex items-center gap-1">
+              <button onClick={() => fileRef.current.click()} className="btn-ghost flex h-9 items-center gap-1.5 px-2 text-sm text-sub" data-testid="post-add-photo-btn"><ImagePlus size={17} />Foto</button>
+              {!parentId && <button onClick={() => setPollOpen(true)} className="btn-ghost flex h-9 items-center gap-1.5 px-2 text-sm text-sub" data-testid="post-add-poll-btn"><BarChart3 size={17} />Polling</button>}
+            </div>
+            {!parentId && <CreatePollDialog open={pollOpen} onOpenChange={setPollOpen} onSubmitPoll={(poll) => submit(poll).then(() => toast.success("Polling diposting"))} />}
             <input ref={fileRef} type="file" accept="image/*" multiple hidden onChange={(e) => { addFiles(e.target.files); e.target.value = ""; }} data-testid="post-photo-input" />
-            <button onClick={submit} disabled={busy || (!text.trim() && !files.length)} className="btn-accent h-9 px-5 text-sm font-semibold disabled:opacity-40" data-testid="post-submit-btn">{parentId ? "Balas" : "Posting"}</button>
+            <button onClick={send} disabled={busy || (!text.trim() && !files.length)} className="btn-accent h-9 px-5 text-sm font-semibold disabled:opacity-40" data-testid="post-submit-btn">{parentId ? "Balas" : "Posting"}</button>
           </div>
         </div>
       </div>
@@ -90,6 +98,7 @@ function PostCard({ p, onChange, onDelete, reply }) {
           {(p.author_id === me.user_id || isAdmin) && <button onClick={del} className="ml-auto text-sub hover:text-rose-500" aria-label="Hapus" data-testid={`post-delete-${p.id}`}><Trash2 size={14} /></button>}</div>
         {p.text && <p className="mt-1 whitespace-pre-wrap break-words text-[15px] leading-relaxed" data-testid={`post-text-${p.id}`}><RichText text={p.text} mentionIds={p.mention_ids} /></p>}
         {p.attachments?.length > 0 && <div className={`mt-2.5 grid gap-1.5 ${p.attachments.length > 1 ? "grid-cols-2" : "grid-cols-1"}`}>{p.attachments.map((a) => <a key={a.id} href={fileUrl(a.id)} target="_blank" rel="noreferrer"><img src={fileUrl(a.id)} alt={a.name} className={`rounded-2xl border object-cover ${p.attachments.length > 1 ? "aspect-square w-full" : "max-h-[420px] w-auto max-w-full"}`} /></a>)}</div>}
+        {p.poll_id && <div className="mt-2.5"><PollCard pollId={p.poll_id} compact /></div>}
         <div className="mt-2 flex flex-wrap items-center gap-1">
           <button onClick={like} className={`flex h-8 items-center gap-1.5 rounded-full px-2 text-sm ${p.liked ? "text-rose-500" : "text-sub hover:text-rose-500"}`} data-testid={`post-like-${p.id}`}><Heart size={16} fill={p.liked ? "currentColor" : "none"} />{p.like_count > 0 && p.like_count}</button>
           {!reply && <button onClick={() => navigate(`/beranda/${p.id}`)} className="flex h-8 items-center gap-1.5 rounded-full px-2 text-sm text-sub hover:text-ink" data-testid={`post-reply-btn-${p.id}`}><MessageCircle size={16} />{p.reply_count > 0 ? p.reply_count : "Balas"}</button>}

@@ -337,8 +337,16 @@ async def accessible_poll(pid, u):
     p = await db.polls.find_one({"id": pid, "workspace_id": u["workspace_id"]}, P)
     if not p:
         raise HTTPException(404, "Poll not found")
+    if p.get("post_id"):
+        return p, None
     c = await get_conv(p["conversation_id"], u)
     return p, c
+
+
+async def poll_audience(p, c):
+    if c:
+        return c["member_ids"]
+    return [x["user_id"] async for x in db.users.find({"workspace_id": p["workspace_id"]}, {"user_id": 1}) if x["user_id"] in manager.conns]
 
 
 @router.get("/polls")
@@ -361,7 +369,7 @@ async def get_poll(pid: str, u=Depends(get_user)):
 @router.post("/polls/{pid}/vote")
 async def vote(pid: str, body: dict = Body(...), u=Depends(get_user)):
     p, c = await accessible_poll(pid, u)
-    if u["user_id"] not in c["member_ids"]:
+    if c and u["user_id"] not in c["member_ids"]:
         raise HTTPException(403, "Join the conversation to vote")
     view = poll_view(p, [], u)
     if view["status"] == "closed":
@@ -375,7 +383,7 @@ async def vote(pid: str, body: dict = Body(...), u=Depends(get_user)):
         raise HTTPException(400, "You have already voted")
     await db.poll_votes.update_one({"poll_id": pid, "user_id": u["user_id"]}, {"$set": {"option_ids": ids, "voted_at": now_iso()}}, upsert=True)
     res = poll_view(p, await db.poll_votes.find({"poll_id": pid}, P).to_list(5000), u)
-    await manager.send(c["member_ids"], {"type": "poll:update", "data": {"poll_id": pid}})
+    await manager.send(await poll_audience(p, c), {"type": "poll:update", "data": {"poll_id": pid}})
     return res
 
 
@@ -385,7 +393,7 @@ async def close_poll(pid: str, u=Depends(get_user)):
     if p["created_by"] != u["user_id"] and not is_admin(u):
         raise HTTPException(403, "Only the creator can close this poll")
     await db.polls.update_one({"id": pid}, {"$set": {"closed": True}})
-    await manager.send(c["member_ids"], {"type": "poll:update", "data": {"poll_id": pid}})
+    await manager.send(await poll_audience(p, c), {"type": "poll:update", "data": {"poll_id": pid}})
     return {"ok": True}
 
 
