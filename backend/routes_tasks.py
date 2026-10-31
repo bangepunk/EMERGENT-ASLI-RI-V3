@@ -362,6 +362,8 @@ async def update_task(tid: str, body: dict = Body(...), u=Depends(get_user)):
     project = await db.projects.find_one({"id": t.get("project_id")}, P) if t.get("project_id") else None
     if not can_edit(t, u, project):
         raise HTTPException(403, "You cannot edit this task")
+    if not can_edit({**t, "checkpoints": []}, u, project) and set(body) - {"checkpoints"}:
+        raise HTTPException(403, "PIC checkpoint hanya bisa mengubah checkpoint")
     await apply_update(t, body, u, await ws_statuses(u["workspace_id"]))
     await broadcast(u)
     return await get_task(tid, u)
@@ -465,6 +467,14 @@ async def update_board(bid: str, body: dict = Body(...), u=Depends(get_user)):
     if "member_ids" in body:
         upd["member_ids"] = await board_members(u, body["member_ids"])
         new = [m for m in upd["member_ids"] if m not in b["member_ids"]]
+        gone = [m for m in b["member_ids"] if m not in upd["member_ids"]]
+        if gone:
+            bq = {"board_id": bid}
+            await db.tasks.update_many({**bq, "assignee_id": {"$in": gone}}, {"$set": {"assignee_id": None}})
+            await db.tasks.update_many({**bq, "reviewer_id": {"$in": gone}}, {"$set": {"reviewer_id": None}})
+            await db.tasks.update_many(bq, {"$pull": {"collaborator_ids": {"$in": gone}}})
+            await db.tasks.update_many({**bq, "checkpoints.assignee_id": {"$in": gone}}, {"$set": {"checkpoints.$[c].assignee_id": None}},
+                                       array_filters=[{"c.assignee_id": {"$in": gone}}])
         await notify(u["workspace_id"], new, "project", f"Kamu ditambahkan ke board {upd.get('name', b['name'])}", "", f"/tasks?board={bid}", u["user_id"])
     await db.boards.update_one({"id": bid}, {"$set": upd})
     await broadcast(u)
@@ -647,4 +657,8 @@ async def update_project(pid: str, body: dict = Body(...), u=Depends(get_user)):
 
 @router.get("/activity")
 async def team_activity(u=Depends(get_user)):
-    return await db.task_activity.find({"workspace_id": u["workspace_id"]}, P).sort("created_at", -1).limit(30).to_list(30)
+    q = {"workspace_id": u["workspace_id"]}
+    ids = await board_scope(u)
+    if ids is not None:
+        q["task_id"] = {"$in": await db.tasks.distinct("id", {"workspace_id": u["workspace_id"], "board_id": {"$in": ids}})}
+    return await db.task_activity.find(q, P).sort("created_at", -1).limit(30).to_list(30)

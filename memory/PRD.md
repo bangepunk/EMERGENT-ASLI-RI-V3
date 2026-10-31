@@ -44,6 +44,11 @@ Creative, marketing, product teams, management; workspace admins.
 - Notification panel docked in layout (no overlap); toasts moved to top-center
 - Beranda polling (2026-10-31): composer "Polling" button reuses CreatePollDialog; poll stored in db.polls with post_id (conversation_id None), voted by whole workspace, live poll:update to all online users; chat polls unchanged
 
+## Revisi 3 (2026-10-31)
+- Beranda: #hashtag parsed into post.tags (backfilled), clickable → /beranda?tag=x filter (matches root or replies), Trending panel (GET /api/posts/trending, top 10 tags last 7 days), feed shows first 5 comments inline + "Lihat N komentar lainnya"
+- Task boards (db.boards): admin/manager create/edit (name, color, members, add-by-division), admin delete (empty only). Admin sees all boards; others only boards they're member/creator of — enforced on list/get/patch/bulk/comments/export/stats/search/profile. Assignee/reviewer/collaborator/checkpoint PIC must be board members. Startup migration split existing tasks into "Board <division>" by assignee department (task people added as members)
+- Checkpoints per task: title, PIC, done (done_at/by), progress % stored on task; per-checkpoint discussion thread, "Laporkan kendala" issues with resolve → task.open_issues; card/list show progress & issue badge; saved view "Ada Kendala"
+
 ## Backlog
 - P1: shadcn date pickers instead of native inputs; TURN server for calls behind strict NATs; true browser push (service worker) when tab closed; link previews for URLs.
 - P2: drag reorder of org units among siblings (API exists), message threads view, sticker pack management UI per pack, larger-group calls via SFU.

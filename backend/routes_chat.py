@@ -93,7 +93,8 @@ async def conversation_detail(cid: str, u=Depends(get_user)):
         for a in m["attachments"]:
             files.append({**a, "message_id": m["id"], "sender_id": m["sender_id"], "created_at": m["created_at"]})
     c["files"] = files
-    c["tasks"] = await db.tasks.find({"workspace_id": u["workspace_id"], "conversation_id": cid}, {"_id": 0, "id": 1, "number": 1, "title": 1, "status": 1}).to_list(50)
+    from routes_tasks import scoped
+    c["tasks"] = await db.tasks.find(await scoped(u, {"workspace_id": u["workspace_id"], "conversation_id": cid}), {"_id": 0, "id": 1, "number": 1, "title": 1, "status": 1}).to_list(50)
     c["active_call"] = await db.calls.find_one({"conversation_id": cid, "status": "active"}, P)
     return c
 

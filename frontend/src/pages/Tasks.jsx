@@ -77,7 +77,8 @@ export function TaskWorkspace({ projectId, compactHeader }) {
         </div>
       )}
       {editBoard && <BoardDialog board={editBoard} onClose={() => setEditBoard(null)} onSaved={(b) => { loadBoards(); load(); if (!b && editBoard.id === boardId) pickBoard(""); }} />}
-      <div className="mb-4 flex flex-wrap gap-1.5" data-testid="saved-views">
+      <select value={saved} onChange={(e) => { setSaved(e.target.value); setSelected([]); }} className={`${sel} mb-3 w-full md:hidden`} data-testid="saved-view-select">{SAVED_VIEWS.map(([k, l]) => <option key={k} value={k}>{l}</option>)}</select>
+      <div className="mb-4 hidden flex-wrap gap-1.5 md:flex" data-testid="saved-views">
         {SAVED_VIEWS.map(([k, l]) => <button key={k} onClick={() => { setSaved(k); setSelected([]); }} className={`h-9 whitespace-nowrap rounded-full px-3.5 text-sm font-medium ${saved === k ? "bg-ink text-[var(--c-surface)]" : "border bg-surface text-sub"}`} data-testid={`saved-view-${k}`}>{l}</button>)}
       </div>
       <div className="mb-5 flex flex-wrap items-center gap-2">
@@ -104,7 +105,7 @@ export function TaskWorkspace({ projectId, compactHeader }) {
           <button onClick={() => setSelected([])} className="ml-auto text-sub" aria-label="Clear selection"><X size={16} /></button>
         </div>
       )}
-      {!tasks ? <Spinner /> : view === "board" ? <Board tasks={tasks} onOpen={open} onNew={(status) => newTask({ status })} reload={load} />
+      {!tasks || !boards ? <Spinner /> : !boards.length && !projectId ? null : view === "board" ? <Board tasks={tasks} onOpen={open} onNew={(status) => newTask({ status })} reload={load} />
         : view === "list" ? <ListView tasks={tasks} projects={projects} onOpen={open} selected={selected} setSelected={setSelected} reload={load} groupBy={groupBy} boardId={boardId} />
         : view === "timeline" ? <Timeline tasks={tasks} onOpen={open} /> : <Calendar tasks={tasks} onOpen={open} />}
       <TaskCreate open={!!create} onOpenChange={(v) => !v && setCreate(null)} defaults={{ ...create, project_id: projectId }} onCreated={load} />

@@ -15,8 +15,8 @@ const esc = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 function RichText({ text, mentionIds }) {
   const { userMap } = useApp();
   const names = (mentionIds || []).map((id) => userMap[id]?.name).filter(Boolean);
-  const tag = "(?<![\\w#])#\\w{1,40}";
-  const rx = new RegExp(names.length ? `(@(?:${names.map(esc).join("|")})|${tag})` : `(${tag})`, "g");
+  const tag = "(?<![\\p{L}\\p{N}_#])#[\\p{L}\\p{N}_]{1,40}";
+  const rx = new RegExp(names.length ? `(@(?:${names.map(esc).join("|")})|${tag})` : `(${tag})`, "gu");
   return text.split(rx).map((part, i) => {
     if (!(i % 2)) return part;
     if (part.startsWith("#")) return <Link key={i} to={`/beranda?tag=${encodeURIComponent(part.slice(1).toLowerCase())}`} className="font-semibold text-sky-600 hover:underline dark:text-sky-400" data-testid={`hashtag-${part.slice(1).toLowerCase()}`}>{part}</Link>;

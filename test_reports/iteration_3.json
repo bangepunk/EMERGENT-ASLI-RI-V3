@@ -1,0 +1,60 @@
+{
+  "summary": "Iteration 3: tested Boards + access control, checkpoints/progress/issues, Beranda hashtags/trending/inline comments (backend pytest 19 tests + Playwright UI desktop/mobile, admin + employee). Almost everything works. One access-control leak found: GET /api/activity (Dashboard 'Team Activity' widget) is not board-scoped, so an employee sees task titles and checkpoint/issue activity from boards they are not a member of.",
+  "backend_issues": {
+    "critical": [
+      {"endpoint": "GET /api/activity (routes_tasks.team_activity)", "issue": "Not scoped by board membership. Employee test_emp_1, who is in NO board, gets activity entries (task_title, issue/checkpoint actions) for tasks in boards they can't access. Confirmed in the UI: Dashboard Team Activity showed 'TEST_UI_Checkpoint_Task' / 'melaporkan kendala di Draft' to the employee. Fix: filter task_activity by task_id in the user's scoped tasks, or store board_id on activity and filter by board_scope(u).", "priority": "HIGH"}
+    ],
+    "minor": [
+      {"endpoint": "PATCH /api/boards/{id} member_ids", "issue": "Removing a member does not check tasks where that person is assignee, reviewer, collaborator or checkpoint PIC. They keep the role but lose access to the task. Later edits to the task (e.g. moving it to another board) then fail with 'PIC checkpoint harus anggota board'. Either block removal, warn, or unassign."},
+      {"endpoint": "routes_chat.py:96 conversation tasks, routes_tasks.project_progress, /api/admin/stats", "issue": "These task reads are not board-scoped. The conversation task list is limited to chat members, and stats are admin-only or counts only, so the risk is low. Review them for consistency."},
+      {"endpoint": "can_edit (checkpoint PIC)", "issue": "A checkpoint PIC gets full edit rights on the whole task (title, status, assignee, other checkpoints), not just their own checkpoint. Confirm this is intended."}
+    ]
+  },
+  "frontend_issues": {
+    "ui_bugs": [
+      {"component": "Beranda RichText hashtag regex", "issue": "The JS regex /\\w/ is ASCII-only but Python's \\w is Unicode, so tags like #café produce a link to 'caf' that returns no posts. Use /[\\p{L}\\p{N}_]/u in JS or ASCII-only in the backend.", "selector": "[data-testid^=hashtag-]", "priority": "LOW"}
+    ],
+    "integration_issues": [
+      {"flow": "Dashboard Team Activity (employee)", "issue": "Shows activity of tasks in boards the employee is not a member of (caused by the backend /api/activity leak).", "affected_selectors": []}
+    ],
+    "design_issues": [
+      {"screen": "Tasks mobile (390px)", "issues": ["The board switcher and 11 saved-view chips wrap onto about 7 rows, pushing the task list below the first screen. Use a horizontally scrollable row."]},
+      {"screen": "Tasks (user with no boards)", "issues": ["Shows no-boards-msg but still renders 'No tasks match these filters' plus an empty sheet with a 'Tambah baris baru' add row. Hide the sheet and add row when boards is empty."]}
+    ]
+  },
+  "passed_flows": [
+    "Migration: every task has board_id; 'Board Marketing' exists (6 tasks)",
+    "Employee with no board: GET /tasks [], GET/PATCH/comment on another board's task 404, search tasks [], stats/monthly [], user profile tasks [], export json [], POST /boards 403, POST /tasks 400/404; UI shows no-boards-msg, no board-new-btn, New Task gives toast",
+    "Admin adds test_emp_1 to a board: employee sees only that board and its tasks; still 404 on Board Marketing; PATCH/DELETE board 403; creating without board_id defaults to the member board",
+    "Board member rule: assignee/reviewer/checkpoint PIC not in board -> 400 'bukan anggota board'/'PIC checkpoint harus anggota board'; moving a board in task-detail-board shows an error toast and the select reverts",
+    "BoardDialog: name, description, color, member search, checkbox, save; board-tab filters (?board=); delete board with tasks -> toast 'Pindahkan atau hapus semua task...'",
+    "Task create: task-board-select defaults to the selected board; task created in the correct board",
+    "Checkpoints UI: add 2 checkpoints, tick -> task-progress-label '50% · 1/2 selesai'; PIC select works; discuss thread + Laporkan kendala -> comment-issue-badge 'Kendala', open_issues=1; comment-resolve -> 'Kendala selesai', open_issues=0; reopen works",
+    "Employee as checkpoint PIC (not assignee) can tick their checkpoint -> 100%, 'Selesai oleh Test Employee'",
+    "card-progress (50%) + card-issue-indicator on Board view; sheet-progress in List; saved-view-issues lists only tasks with open issues",
+    "Beranda: '#rapat dan #Promo' -> tags ['rapat','promo']; hashtag link -> /beranda?tag=promo with active-tag-filter + clear-tag-filter; a reply's tag surfaces its parent post; 7 replies -> 5 inline (oldest first) + 'Lihat 2 komentar lainnya' -> thread shows all 7; like/react on an inline reply works",
+    "Trending panel on desktop (counts desc), trending-tag click filters; mobile shows trending-compact chips and hides the panel",
+    "Regression: list inline status edit works"
+  ],
+  "test_report_links": ["/app/backend/tests/test_iter3_boards_checkpoints_hashtags.py", "/app/backend/tests/cleanup_iter3.py", "/app/test_reports/pytest/pytest_iter3.xml"],
+  "action_items": [
+    "HIGH: scope GET /api/activity by the user's board membership (admin sees all)",
+    "Handle board member removal for tasks where the removed person is assignee, reviewer, collaborator or checkpoint PIC",
+    "Mobile Tasks: make the board switcher and saved views horizontally scrollable",
+    "Hide the empty sheet and add row when the user has no boards",
+    "Align the hashtag regex between frontend (JS) and backend (Python Unicode \\w)"
+  ],
+  "critical_code_review_comments": [
+    "team_activity in routes_tasks.py ignores board_scope (data leak)",
+    "update_board does not validate existing task roles against the new member list",
+    "routes_tasks.py is 650 lines and getting close to the 700-line limit; consider moving boards and projects into separate modules",
+    "build_query re-imports re inside the function although it is already imported at module level (cosmetic)"
+  ],
+  "updated_files": ["/app/backend/tests/test_iter3_boards_checkpoints_hashtags.py", "/app/backend/tests/cleanup_iter3.py"],
+  "success_rate": {"backend": "95% (18/19, only the /api/activity leak fails)", "frontend": "95%"},
+  "seed_data_creation": "All TEST_ data was cleaned up: TEST_ boards, their tasks, comments and activity were removed directly in Mongo via cleanup_iter3.py, and TEST_ posts were soft-deleted. Board Marketing was never modified; its members are unchanged: user_8ee248b167d8, user_a640fa19cf4a, user_98027d1dcb1b, user_2e71adf176d4, user_1793c79438d7, user_f1947c50e0fe. Some notifications for test users remain.",
+  "retest_needed": true,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "Run pytest with -n 0. With xdist, the shared state dict S is split across workers and tests fail falsely. Then run tests/cleanup_iter3.py. In Playwright, the session cookie takes priority over the Authorization header, so after switching cookies, call admin APIs via curl. The Tasks view defaults to Board (prefs); click view-list before using sheet selectors. The checkpoint PIC is a native <select> (use select_option).",
+  "test_credentials": "test_session_admin (super_admin test_admin_1), test_session_emp (employee test_emp_1), per /app/memory/test_credentials.md"
+}
