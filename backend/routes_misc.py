@@ -63,6 +63,8 @@ async def update_ws(body: dict = Body(...), u=Depends(get_user)):
                 seen.add(nm.lower())
                 items.append({"name": nm, "color": str(i.get("color") or "#94A3B8")[:9]})
         upd["item_types"] = items
+    if upd.get("login_image_file_id") and not await db.files.find_one({"id": upd["login_image_file_id"], "workspace_id": u["workspace_id"], "content_type": {"$regex": "^image/"}}):
+        raise HTTPException(400, "Gambar login harus berupa file gambar")
     if "brand_name" in body:
         upd["brand_name"] = body["brand_name"]
     await db.workspaces.update_one({"id": u["workspace_id"]}, {"$set": upd})

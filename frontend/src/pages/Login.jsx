@@ -17,7 +17,7 @@ function Floating({ image }) {
   const src = image ? `${process.env.REACT_APP_BACKEND_URL}/api/public/login-image/${image}` : "/login-default.jpg";
   return (
     <div className="relative hidden lg:flex flex-1 overflow-hidden rounded-[32px] bg-[#20283B] p-10 text-white" data-testid="login-hero">
-      <img src={src} alt="" className="absolute inset-0 h-full w-full object-cover" data-testid="login-hero-image" />
+      <img src={src} alt="" onError={(e) => { if (!e.currentTarget.src.endsWith("/login-default.jpg")) e.currentTarget.src = "/login-default.jpg"; }} className="absolute inset-0 h-full w-full object-cover" data-testid="login-hero-image" />
       <div className="absolute inset-0 bg-gradient-to-t from-[#20283B]/90 via-[#20283B]/30 to-transparent" />
       <div className="relative z-10 flex w-full flex-col justify-between">
         <span className="inline-flex w-fit items-center gap-2 rounded-full bg-white/20 px-4 py-1.5 text-sm font-medium backdrop-blur"><Sparkles size={14} />Your Team. One Circle.</span>

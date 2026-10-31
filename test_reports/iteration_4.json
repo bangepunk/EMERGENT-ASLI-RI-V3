@@ -1,0 +1,26 @@
+{
+  "summary": "Iteration 4: weekly report cron/test endpoint auth, login page custom image (upload/preview/public serve/reset), group avatars (img vs initial tile) and Super-Admin-only group photo. Backend 15/15 pytest pass; frontend all flows pass. No real emails sent (cron never called with real secret, test-send button not clicked, admin /reports/weekly/test not called). State restored: login_image_file_id=null, TEST_ groups deleted, Marketing/General Announcements untouched.",
+  "backend_issues": {"critical": [], "minor": [
+    {"endpoint": "PATCH /api/workspace login_image_file_id", "issue": "Accepts any string/file id (e.g. text/plain file id) without validating it exists and is an image in the workspace; public endpoint then 404s and login hero shows broken image. Frontend guards it, API does not."},
+    {"endpoint": "PATCH /api/groups/{cid}", "issue": "Super Admin gets 404 on private groups they are not member of (can_see), so 'only Super Admin can change group photo' cannot be applied to such groups. Likely by design - confirm."}
+  ]},
+  "frontend_issues": {"ui_bugs": [], "integration_issues": [], "design_issues": [
+    {"screen": "Login", "issues": ["login-hero-image has no onError fallback to /login-default.jpg if custom image fails to load"]}
+  ]},
+  "test_report_links": ["/app/backend/tests/test_iter4_reports_loginimg_groupphoto.py", "/app/test_reports/pytest/pytest_iter4.xml"],
+  "action_items": [
+    "Optional: validate login_image_file_id in PATCH /api/workspace (file exists in ws, content_type image/*) or null",
+    "Optional: add onError fallback to default image on login hero"
+  ],
+  "critical_code_review_comments": [
+    "cron_weekly: secret compare via hmac, idempotent via cron_runs _id, background task - OK. os.environ['WEBHOOK_CRON_SECRET'] KeyError would 500 if env missing.",
+    "run_weekly sends sequentially with no throttling; fine for small manager count.",
+    "GroupDialog always sends image field; backend only 403s when value differs - non-super-admin edits of other fields work (verified)."
+  ],
+  "updated_files": ["/app/backend/tests/test_iter4_reports_loginimg_groupphoto.py"],
+  "success_rate": {"backend": "100%", "frontend": "100%"},
+  "seed_data_creation": "Temporary TEST_ groups and uploaded TEST_ files created; groups deleted, login image reset to null. Uploaded file docs remain in db.files (harmless).",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Verified: cron 401 without/wrong/non-Bearer token; /reports/weekly/test 403 employee, 401 unauth. Login hero default img loads (naturalWidth 1400); upload via settings updates preview, branding, logged-out /login; non-image rejected with toast 'Pilih file gambar'; reset works. Group avatars: Marketing img in list/header/dashboard, others initial letter, no '#'. Edit dialog shows group-image-input only for super_admin; emp PATCH image -> 403 'Hanya Super Admin...'; emp create with image -> image ''. Details panel is open by default at >=1280px (don't click chat-details-toggle first)."
+}
