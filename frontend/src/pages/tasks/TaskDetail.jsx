@@ -49,7 +49,7 @@ export default function TaskDetail({ id, onClose, onChanged }) {
   };
   const setAtt = (fn) => patch({ attachments: fn(t.attachments) });
   const { pick, input } = useUploader(setAtt);
-  const share = async (cid) => { try { await api.post(`/tasks/${id}/share`, { conversation_id: cid }); toast.success("Task shared"); setGroups(null); } catch (e) { toast.error(errMsg(e)); } };
+  const share = async (cid) => { try { await api.post(`/tasks/${id}/share`, { conversation_id: cid }); toast.success("Preview dikirim ke grup, status jadi In Review"); setGroups(null); load(); } catch (e) { toast.error(errMsg(e)); } };
   const done = statuses.find((s) => s.key === t?.status)?.is_done;
   const ro = t && !t.can_edit;
   const d = t && dueInfo(t.deadline, done);
@@ -104,7 +104,7 @@ export default function TaskDetail({ id, onClose, onChanged }) {
                 <section><h4 className="mb-1 text-sm font-bold">Subtasks ({t.subtasks.filter((s) => s.done).length}/{t.subtasks.length})</h4><ListEditor items={t.subtasks} field="title" onChange={(v) => patch({ subtasks: v })} placeholder="Add subtask" testid="task-detail-subtasks" /></section>
               </div>
               <div className="flex flex-wrap gap-2">
-                <button onClick={() => (groups ? setGroups(null) : api.get("/conversations").then((r) => setGroups(r.data.filter((c) => c.type === "group"))))} className="btn-ghost flex h-10 items-center gap-1.5 border px-4 text-sm font-semibold" data-testid="task-share-btn"><Share2 size={14} />Share to group</button>
+                <button onClick={() => (groups ? setGroups(null) : api.get("/conversations").then((r) => setGroups(r.data.filter((c) => c.type === "group"))))} className="btn-ghost flex h-10 items-center gap-1.5 border px-4 text-sm font-semibold" data-testid="task-share-btn"><Share2 size={14} />Preview to group</button>
                 {t.conversation_id && <button onClick={() => navigate(`/messages/${t.conversation_id}`)} className="btn-ghost flex h-10 items-center gap-1.5 border px-4 text-sm font-semibold" data-testid="task-open-conversation"><MessageSquare size={14} />Open conversation</button>}
                 {(isManager || t.requestor_id === me.user_id) && <button onClick={() => patch({ archived: !t.archived }, t.archived ? "Restored" : "Archived")} className="btn-ghost flex h-10 items-center gap-1.5 border px-4 text-sm font-semibold" data-testid="task-archive-btn"><Archive size={14} />{t.archived ? "Unarchive" : "Archive"}</button>}
               </div>

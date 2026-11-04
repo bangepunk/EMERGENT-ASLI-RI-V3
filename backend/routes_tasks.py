@@ -524,8 +524,52 @@ async def share_task(tid: str, body: dict = Body(...), u=Depends(get_user)):
     from routes_chat import get_conv, post_message
     t = await load_task(tid, u)
     c = await get_conv(body.get("conversation_id"), u, member=True)
-    card = {k: t.get(k) for k in ("id", "number", "number_str", "title", "status", "priority", "deadline", "label_ids", "assignee_id")}
+    if not can_edit(t, u):
+        raise HTTPException(403, "You cannot edit this task")
+    statuses = await ws_statuses(u["workspace_id"])
+    if any(s["key"] == "in_review" for s in statuses) and t["status"] != "in_review":
+        await apply_update(t, {"status": "in_review"}, u, statuses)
+        await broadcast(u)
+    t = await load_task(tid, u)
+    card = {k: t.get(k) for k in ("id", "number", "number_str", "title", "status", "priority", "deadline", "label_ids", "assignee_id", "reviewer_id", "requestor_id")}
+    card["review"] = {"state": "pending"}
     return await post_message(c, u, {"type": "task", "text": body.get("text", ""), "task": card, "attachments": []})
+
+
+@router.post("/tasks/{tid}/review")
+async def review_task(tid: str, body: dict = Body(...), u=Depends(get_user)):
+    from routes_chat import get_conv
+    from core import manager
+    t = await load_task(tid, u)
+    m = await db.messages.find_one({"id": body.get("message_id"), "type": "task", "task.id": tid, "workspace_id": u["workspace_id"]}, P)
+    if not m:
+        raise HTTPException(404, "Preview tidak ditemukan")
+    c = await get_conv(m["conversation_id"], u, member=True)
+    if (m["task"].get("review") or {}).get("state") != "pending":
+        raise HTTPException(400, "Preview ini sudah direview")
+    if not is_manager(u) and u["user_id"] not in {t.get("reviewer_id"), t.get("requestor_id")}:
+        raise HTTPException(403, "Hanya reviewer, requestor, atau manager yang bisa approve/revisi")
+    decision = body.get("decision")
+    if decision not in ("approve", "revise"):
+        raise HTTPException(400, "Keputusan tidak valid")
+    note = (body.get("note") or "").strip()[:1000]
+    statuses = await ws_statuses(u["workspace_id"])
+    done_key = next((s["key"] for s in statuses if s.get("is_done")), None)
+    back_key = "in_progress" if any(s["key"] == "in_progress" for s in statuses) else t["status"]
+    await apply_update(t, {"status": done_key if decision == "approve" else back_key}, u, statuses)
+    if decision == "revise":
+        text = f"Revisi: {note}" if note else "Revisi diminta dari preview grup"
+        await db.task_comments.insert_one({"id": new_id("cmt"), "task_id": tid, "workspace_id": u["workspace_id"], "author_id": u["user_id"], "text": text,
+                                           "mention_ids": [], "checkpoint_id": None, "kind": "update", "resolved": False, "created_at": now_iso()})
+        await db.tasks.update_one({"id": tid}, {"$inc": {"comment_count": 1}})
+        await notify(u["workspace_id"], [t.get("assignee_id")], "task_review", f"Revisi diminta: {t['title']}", note or f"oleh {u['name']}", f"/tasks?task={tid}", u["user_id"])
+    t = await load_task(tid, u)
+    review = {"state": "approved" if decision == "approve" else "revise", "by": u["user_id"], "at": now_iso(), "note": note}
+    await db.messages.update_one({"id": m["id"]}, {"$set": {"task.review": review, "task.status": t["status"]}})
+    m = await db.messages.find_one({"id": m["id"]}, P)
+    await manager.send(c["member_ids"], {"type": "message:update", "data": m})
+    await broadcast(u)
+    return m
 
 
 @router.post("/item-types")

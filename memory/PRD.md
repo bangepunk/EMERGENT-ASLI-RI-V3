@@ -57,6 +57,7 @@ Creative, marketing, product teams, management; workspace admins.
 ## Revisi 5 (2026-11-04)
 - Home stats reworked to match user reference (previous crowded monthly dashboard cancelled): "Performa & Beban Kerja Tim" (week day picker Sen–Min, 7 Hari / 4 Minggu, line/bar chart of tasks selesai vs overdue via recharts, cards Tugas Selesai / Lewat Tenggat / Ketepatan Waktu) and "Kapasitas & Beban Kerja Personel" (status pills Optimal/Stabil/Under Pressure from deadlines on selected day: 0–1/2–3/4+, division filter, person cards with active load share, running tasks, Kirim Pesan, Lihat di Kanban → /tasks?assignee=&kanban=1). API GET /api/stats/team?anchor=&range=7d|4w (WIB, board-scoped, employees see self only)
 - Task card accent color now a solid left border (no white gap)
+- "Preview to group" (renamed from Share to group): sending sets task to In Review and posts a preview card with Approve / Revisi buttons (POST /api/tasks/{tid}/review {message_id, decision, note}). Only reviewer, requestor or manager/admin can decide; Approve → Done, Revisi → In Progress + comment "Revisi: …" + notification to assignee; card shows result and can't be reviewed twice
 
 ## Backlog
 - P1: shadcn date pickers instead of native inputs; TURN server for calls behind strict NATs; true browser push (service worker) when tab closed; link previews for URLs.

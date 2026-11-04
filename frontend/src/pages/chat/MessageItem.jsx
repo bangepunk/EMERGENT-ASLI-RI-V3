@@ -9,6 +9,37 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import PollCard from "./PollCard";
 import { StickerTile } from "./Composer";
 
+function TaskPreview({ m }) {
+  const { userMap, me, isManager } = useApp();
+  const navigate = useNavigate();
+  const [busy, setBusy] = useState(false);
+  const t = m.task;
+  const r = t.review;
+  const can = isManager || [t.reviewer_id, t.requestor_id].includes(me.user_id);
+  const decide = async (decision) => {
+    const note = decision === "revise" ? window.prompt("Catatan revisi (opsional):", "") : "";
+    if (note === null) return;
+    setBusy(true);
+    try { await api.post(`/tasks/${t.id}/review`, { message_id: m.id, decision, note }); toast.success(decision === "approve" ? "Task disetujui & dipindah ke Done" : "Revisi dikirim ke assignee"); } catch (e) { toast.error(errMsg(e)); }
+    setBusy(false);
+  };
+  return (
+    <div className="w-64 rounded-2xl border bg-surface p-3 text-left text-ink shadow-sm" data-testid={`message-task-card-${t.id}`}>
+      <button onClick={() => navigate(`/tasks?task=${t.id}`)} className="block w-full text-left">
+        <p className="flex items-center gap-1.5 text-[11px] font-semibold text-sub"><CheckSquare size={12} className="text-brand" />Preview task {t.number_str || `T-${t.number}`}</p>
+        <p className="mt-1 font-semibold">{t.title}</p>
+        <div className="mt-2 flex gap-1.5"><StatusBadge status={t.status} /><PriorityBadge value={t.priority} /></div>
+      </button>
+      {r?.state === "pending" && (can ? (
+        <div className="mt-3 grid grid-cols-2 gap-2">
+          <button disabled={busy} onClick={() => decide("approve")} className="h-9 rounded-xl bg-emerald-500 text-sm font-semibold text-white hover:bg-emerald-600 disabled:opacity-50" data-testid={`task-preview-approve-${m.id}`}>Approve</button>
+          <button disabled={busy} onClick={() => decide("revise")} className="h-9 rounded-xl border border-amber-300 bg-amber-50 text-sm font-semibold text-amber-700 hover:bg-amber-100 disabled:opacity-50" data-testid={`task-preview-revise-${m.id}`}>Revisi</button>
+        </div>) : <p className="mt-3 text-xs text-sub">Menunggu review</p>)}
+      {r && r.state !== "pending" && <p className={`mt-3 rounded-xl px-2.5 py-1.5 text-xs font-semibold ${r.state === "approved" ? "bg-emerald-50 text-emerald-700" : "bg-amber-50 text-amber-700"}`} data-testid={`task-preview-result-${m.id}`}>{r.state === "approved" ? "Disetujui" : "Diminta revisi"} oleh {userMap[r.by]?.name?.split(" ")[0] || "\u2014"}{r.note ? `: ${r.note}` : ""}</p>}
+    </div>
+  );
+}
+
 const QUICK = ["👍", "❤️", "😂", "🎉", "🙏", "👀"];
 
 function renderText(text, userMap) {
@@ -55,13 +86,7 @@ export default function MessageItem({ m, mine, grouped, conv, onReply, onCreateT
             {m.deleted ? <div className="rounded-2xl border border-dashed px-3 py-2 text-sm italic text-sub">Message deleted</div> : (<>
               {m.type === "sticker" && m.sticker && <StickerTile s={m.sticker} size={120} />}
               {m.type === "poll" && <PollCard pollId={m.poll_id} />}
-              {m.type === "task" && m.task && (
-                <button onClick={() => navigate(`/tasks?task=${m.task.id}`)} className="w-64 rounded-2xl border bg-surface p-3 text-left text-ink shadow-sm hover:-translate-y-0.5 transition-transform" data-testid={`message-task-card-${m.task.id}`}>
-                  <p className="flex items-center gap-1.5 text-[11px] font-semibold text-sub"><CheckSquare size={12} className="text-brand" />Task {m.task.number_str || `T-${m.task.number}`}</p>
-                  <p className="mt-1 font-semibold">{m.task.title}</p>
-                  <div className="mt-2 flex gap-1.5"><StatusBadge status={m.task.status} /><PriorityBadge value={m.task.priority} /></div>
-                </button>
-              )}
+              {m.type === "task" && m.task && <TaskPreview m={m} />}
               {(m.text && m.type !== "poll") && (editing ? (
                 <div className="flex flex-col gap-1"><textarea value={val} onChange={(e) => setVal(e.target.value)} className="w-72 max-w-full rounded-xl border bg-surface p-2 text-sm text-ink" data-testid="edit-message-input" />
                   <div className="flex gap-2 text-xs"><button onClick={save} className="font-semibold text-brand" data-testid="save-edit-btn">Save</button><button onClick={() => setEditing(false)} className="text-sub">Cancel</button></div></div>
