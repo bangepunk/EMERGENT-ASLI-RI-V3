@@ -20,7 +20,7 @@ function StatCard({ label, value, note, tone, testid }) {
 }
 
 function TeamChart({ data, type }) {
-  const rows = data.series.map((s, i) => { const d = new Date(`${s.start}T00:00:00`); return { name: data.range === "4w" ? `${d.getDate()} ${MON[d.getMonth()]}` : WD_FULL[i], Selesai: s.done, Overdue: s.overdue }; });
+  const rows = data.series.map((s, i) => { const d = new Date(`${s.start}T00:00:00`); const future = s.start > data.today; return { name: data.range === "4w" ? `${d.getDate()} ${MON[d.getMonth()]}` : WD_FULL[i], Selesai: future ? null : s.done, Overdue: future ? null : s.overdue }; });
   const common = { data: rows, margin: { top: 10, right: 12, left: -18, bottom: 0 } };
   const axes = [<CartesianGrid key="g" strokeDasharray="3 6" vertical={false} stroke="var(--c-border, #E5E7EB)" />, <XAxis key="x" dataKey="name" tickLine={false} axisLine={false} tick={{ fontSize: 12, fill: "var(--c-sub, #7A8194)" }} />, <YAxis key="y" allowDecimals={false} tickLine={false} axisLine={false} tick={{ fontSize: 12, fill: "var(--c-sub, #7A8194)" }} />, <Tooltip key="t" cursor={{ fill: "rgba(0,0,0,0.04)" }} contentStyle={{ borderRadius: 12, border: "1px solid #E5E7EB", fontSize: 12 }} />];
   return (
@@ -55,7 +55,7 @@ function TeamPerformance({ data, anchor, setAnchor, range, setRange }) {
           </div>
         </div>
       </div>
-      <div className="mt-6 grid gap-4 sm:grid-cols-3">
+      <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-3">
         <StatCard tone="green" label="Tugas Selesai" value={s.done} note={s.done ? `${s.done} tugas diselesaikan` : "Belum ada tugas selesai"} testid="team-stat-done" />
         <StatCard tone="red" label="Lewat Tenggat" value={s.overdue} note={s.overdue ? `${s.overdue} tugas melewati deadline` : "Tidak ada keterlambatan"} testid="team-stat-overdue" />
         <StatCard tone="gray" label="Ketepatan Waktu" value={`${s.on_time_rate ?? 0}%`} note={s.due ? `${s.on_time} dari ${s.due} tugas tepat waktu` : "Belum ada data tugas"} testid="team-stat-ontime" />
@@ -74,7 +74,7 @@ function PersonCard({ p }) {
   const [emo, lbl, cls] = STATUS[p.status];
   const dm = async () => { const { data } = await api.post("/conversations/dm", { user_id: p.user_id }); navigate(`/messages/${data.id}`); };
   return (
-    <div className="flex flex-col rounded-3xl border bg-surface p-5 transition-shadow hover:shadow-md" data-testid={`person-card-${p.user_id}`}>
+    <div className="flex min-w-0 flex-col rounded-3xl border bg-surface p-5 transition-shadow hover:shadow-md" data-testid={`person-card-${p.user_id}`}>
       <div className="flex items-start gap-3">
         <Avatar user={usr} size={52} />
         <div className="min-w-0 flex-1"><p className="truncate font-bold">{usr?.name}</p><p className="truncate text-sm text-sub">{usr?.job_title || "—"}</p><p className="truncate text-xs text-sub opacity-80">{usr?.department || "Tanpa divisi"}</p></div>
@@ -109,7 +109,7 @@ function Personnel({ data }) {
         <span className="flex items-center gap-1.5 text-sm text-sub"><Filter size={14} />Divisi:</span>
         {[["", "Semua Divisi"], ...depts.map((d) => [d, d])].map(([k, l]) => <button key={k || "all"} onClick={() => setDiv(k)} className={`h-10 rounded-2xl px-4 text-sm font-semibold transition-colors ${div === k ? "bg-ink text-[var(--c-surface)]" : "bg-surface2 text-ink hover:bg-surface2/70"}`} data-testid={`personnel-div-${k ? k.replace(/\s/g, "-") : "all"}`}>{l}</button>)}
       </div>}
-      <div className="mt-5 grid gap-4 md:grid-cols-2 xl:grid-cols-3">{(all ? people : people.slice(0, 6)).map((p) => <PersonCard key={p.user_id} p={p} />)}</div>
+      <div className="mt-5 grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">{(all ? people : people.slice(0, 6)).map((p) => <PersonCard key={p.user_id} p={p} />)}</div>
       {people.length > 6 && <button onClick={() => setAll(!all)} className="mt-4 w-full rounded-2xl border py-2.5 text-sm font-semibold text-sub hover:text-ink" data-testid="personnel-toggle-all">{all ? "Tampilkan lebih sedikit" : `Lihat semua personel (${people.length})`}</button>}
       {!people.length && <p className="mt-5 text-sm text-sub">Belum ada personel di divisi ini.</p>}
     </section>

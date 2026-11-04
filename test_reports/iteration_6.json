@@ -1,0 +1,33 @@
+{
+  "summary": "Tested the new Home dashboard (Performa & Beban Kerja Tim + Kapasitas & Beban Kerja Personel), the accent-card left bar fix, and /api/stats/team. Backend: 12/12 pytest pass. I recomputed every series independently from the DB for 7d and 4w, checked WIB bucketing of completed_at, the late/overdue rules, that future deadlines are not counted, on_time/due, the status thresholds, employee scope (people=1), invalid anchor (400) and no auth (401). Controlled TEST_ tasks went into an isolated past week and were deleted by id afterwards. Frontend desktop 1440: everything works. That covers the stat cards (equal to the API summary), the day picker (today selected; clicking a day refetches with the anchor and statuses match), the 7d/4w toggle (4w ticks 12 Okt/19 Okt/26 Okt/2 Nov), the line/bar toggle (.recharts-line vs .recharts-bar), personnel pills, division chips, the 6-card limit with toggle-all expanding to 11, Kirim Pesan going to /messages/conv_..., and Lihat di Kanban opening Board view with the assignee filter (3 cards, matching the 3 active tasks). The accent card has border-left 4px solid on the card element itself and its left edge matches the parent, so there is no white gap. Old perf-calendar, KPI and perf-employee-cards elements are gone. One failure: on mobile 390 the page overflows horizontally (scrollWidth 438).",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [
+      {"component": "MonthlyStats.jsx Personnel grid", "issue": "Mobile 390: horizontal page overflow, document.documentElement.scrollWidth=438 (>392). Cause: the person-card grid 'mt-5 grid gap-4 md:grid-cols-2 xl:grid-cols-3' has no explicit column template below md, so the implicit auto column takes the min-content width of the nowrap 'truncate' task titles and person-status pill (column computed as 401px). Cards get clipped on the right ('2 tugas (40...', 'Lihat di Kanba'). I checked it in the browser: setting gridTemplateColumns to minmax(0,1fr) gives scrollWidth=390. Fix: add 'grid-cols-1' (or min-w-0 on PersonCard root).", "selector": "[data-testid^=person-card-]", "priority": "HIGH"}
+    ],
+    "integration_issues": [],
+    "design_issues": [
+      {"screen": "Home / Performa & Beban Kerja Tim", "issues": [
+        "The legend appears twice: 'Tasks Selesai/Tasks Overdue' above the chart and 'Output Selesai/Overdue' in the footer. That is redundant and the labels don't match; keep one, or use the same labels in both.",
+        "KETEPATAN WAKTU shows '0%' when on_time_rate is null (no due tasks, e.g. the employee view). That reads as 0% on time; show '—' instead.",
+        "Line chart draws future days (after today) as 0. Consider null for future buckets so the line stops at today."
+      ]},
+      {"screen": "Dashboard Customize widget list", "issues": ["Widget is still labelled 'Statistik Bulanan' in the WIDGETS map in Dashboard.jsx. Rename it to 'Performa & Beban Kerja Tim'."]}
+    ]
+  },
+  "test_report_links": ["/app/backend/tests/test_iter6_team_stats.py", "/app/test_reports/pytest/iter6.xml"],
+  "action_items": [
+    "Fix the mobile horizontal overflow in the Personnel card grid: add grid-cols-1 to the grid in MonthlyStats.jsx line 112 (or min-w-0 on the PersonCard root).",
+    "Optional: show '—' for null on_time_rate, de-duplicate the chart legend, and rename the 'Statistik Bulanan' widget label."
+  ],
+  "critical_code_review_comments": [
+    "team_stats: people[].share is based on all active tasks, including tasks assigned to inactive users. Acceptable, but shares may not add up to 100% across the visible cards.",
+    "team_stats loads all active tasks (to_list(20000)) and does per-user filtering in Python. That's fine at the current scale (20 tasks)."
+  ],
+  "updated_files": ["/app/backend/tests/test_iter6_team_stats.py"],
+  "success_rate": {"backend": "100%", "frontend": "92% (mobile overflow failed)"},
+  "seed_data_creation": "Inserted 6 TEST_ tasks (id prefix task_TEST_, assignee test_admin_1, deadlines in week 2025-03-03 and today+60) directly into Mongo; deleted by id in module teardown (verified 0 remaining). No real data modified.",
+  "retest_needed": false,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "Sandbox date is 2026-11-04 (WIB). Use cookie session_token=test_session_admin / test_session_emp. test_emp_1 is not a member of board_66d3f84ff6e1, so the employee view has no tasks. Rerun the mobile check: scrollWidth on / at 390px must be <=392 after the fix."
+}
