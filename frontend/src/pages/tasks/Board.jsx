@@ -14,8 +14,7 @@ export function TaskCard({ t, onOpen, done, draggable, onDragStart }) {
   return (
     <button draggable={draggable} onDragStart={onDragStart} onClick={() => onOpen(t.id)} data-testid={`task-card-${t.id}`}
       className="relative w-full overflow-hidden rounded-2xl border bg-surface p-3.5 text-left shadow-sm transition-[transform,box-shadow] hover:-translate-y-0.5 hover:shadow-md"
-      style={style === "tint" && color ? { background: `color-mix(in srgb, ${color} 10%, var(--c-surface))` } : undefined}>
-      {style === "accent" && color && <span className="absolute inset-y-0 left-0 w-1" style={{ background: color }} />}
+      style={style === "tint" && color ? { background: `color-mix(in srgb, ${color} 10%, var(--c-surface))` } : style === "accent" && color ? { borderLeft: `4px solid ${color}` } : undefined}>
       <div className="flex items-start justify-between gap-2"><span className="text-[10px] font-semibold text-sub">{t.number_str}</span><PriorityBadge value={t.priority} /></div>
       <p className={`mt-1.5 text-sm font-semibold leading-snug ${done ? "line-through text-sub" : ""}`}>{t.title}</p>
       {t.label_ids?.length > 0 && <div className="mt-2"><Labels ids={t.label_ids} small /></div>}

@@ -16,6 +16,32 @@ TASK_FIELDS = {"title", "description", "status", "assignee_id", "collaborator_id
                "board_id", "checkpoints"}
 ITEM_COLORS = ["#F87171", "#FB923C", "#FACC15", "#4ADE80", "#60A5FA", "#A78BFA", "#F472B6", "#2DD4BF", "#94A3B8"]
 DEFAULT_ITEMS = [{"name": n, "color": ITEM_COLORS[i]} for i, n in enumerate(["Article Asset", "Article Copywriting", "SocMed Asset", "SocMed Copywriting", "Video Storyline"])]
+WIB = timezone(timedelta(hours=7))
+MIN_KPI_DATA = 3
+
+
+def _wib(s):
+    if not s:
+        return None
+    try:
+        d = datetime.fromisoformat(str(s).replace("Z", "+00:00"))
+    except ValueError:
+        return None
+    return (d if d.tzinfo else d.replace(tzinfo=timezone.utc)).astimezone(WIB)
+
+
+def _utc(d):
+    return d.astimezone(timezone.utc).strftime("%Y-%m-%dT%H:%M:%S")
+
+
+def classify(t, dk, today):
+    dl, comp, done = _wib(t.get("deadline")), _wib(t.get("completed_at")), t["status"] in dk
+    dday = dl.date() if dl else None
+    if done:
+        state = "late" if dday and comp and comp.date() > dday else "on_time" if dday else "done"
+    else:
+        state = "overdue" if dday and dday < today else "pending"
+    return {"done": done, "state": state, "due": bool(dday) and (done or dday < today), "day": dday.isoformat() if dday else None}
 
 
 def clean_text_fields(d):
@@ -535,6 +561,90 @@ async def monthly_stats(month: str = Query(None), user_id: str = Query(None), u=
               "submit_date": 1, "deadline": 1, "completed_at": 1, "created_at": 1}
     tasks = await db.tasks.find(q, fields).sort("created_at", -1).to_list(5000)
     return {"month": f"{y:04d}-{m:02d}", "scope": "all" if is_manager(u) and not user_id else "user", "tasks": tasks}
+
+
+@router.get("/stats/performance")
+async def performance(month: str = Query(None), user_id: str = Query(None), day: str = Query(None), u=Depends(get_user)):
+    now = datetime.now(WIB)
+    today = now.date()
+    try:
+        y, m = map(int, (month or now.strftime("%Y-%m")).split("-"))
+        start = datetime(y, m, 1, tzinfo=WIB)
+    except ValueError:
+        raise HTTPException(400, "Invalid month")
+    end = datetime(y + (m == 12), m % 12 + 1, 1, tzinfo=WIB)
+    ws = await db.workspaces.find_one({"id": u["workspace_id"]}, {"task_statuses": 1, "kpi_target": 1})
+    sts = ws.get("task_statuses", [])
+    dk = {s["key"] for s in sts if s.get("is_done")}
+    idx = next((i for i, s in enumerate(sts) if s["key"] == "in_progress"), 1)
+    not_started = {s["key"] for s in sts[:idx]}
+    base = {"workspace_id": u["workspace_id"], "archived": {"$ne": True}, "assignee_id": {"$ne": None}}
+    if not is_manager(u):
+        base["assignee_id"] = u["user_id"]
+    elif user_id:
+        base["assignee_id"] = user_id
+    await scoped(u, base)
+    fields = {"_id": 0, "id": 1, "number_str": 1, "title": 1, "status": 1, "assignee_id": 1, "deadline": 1, "completed_at": 1, "progress": 1}
+    rng = {"$gte": _utc(start), "$lt": _utc(end)}
+    tasks = await db.tasks.find({**base, "$or": [{"deadline": rng}, {"deadline": None, "created_at": rng}]}, fields).to_list(10000)
+    for t in tasks:
+        t.update(classify(t, dk, today))
+        t["started"] = not t["done"] and t["status"] not in not_started
+
+    def agg(ts):
+        due = sum(1 for t in ts if t["due"])
+        on = sum(1 for t in ts if t["state"] == "on_time")
+        done = sum(1 for t in ts if t["done"])
+        return {"total": len(ts), "done": done, "in_progress": sum(1 for t in ts if t.get("started")), "not_started": sum(1 for t in ts if not t["done"] and not t.get("started")),
+                "overdue": sum(1 for t in ts if t["state"] == "overdue"), "late": sum(1 for t in ts if t["state"] == "late"), "on_time": on, "due": due,
+                "completion_pct": round(100 * done / len(ts)) if ts else 0, "on_time_rate": round(100 * on / due) if due else None}
+
+    sel = day if day and day[:7] == f"{y:04d}-{m:02d}" else (today.isoformat() if (today.year, today.month) == (y, m) else start.date().isoformat())
+    by_day, by_user = {}, {}
+    for t in tasks:
+        by_user.setdefault(t["assignee_id"], []).append(t)
+        if t["day"]:
+            by_day.setdefault(t["day"], []).append(t)
+    days, warnings = [], []
+    d = start.date()
+    while d < end.date():
+        k = d.isoformat()
+        ts = by_day.get(k, [])
+        done = sum(1 for t in ts if t["done"])
+        over = sum(1 for t in ts if t["state"] == "overdue")
+        days.append({"date": k, "total": len(ts), "done": done, "pending": len(ts) - done, "overdue": over,
+                     "progress": round(sum(100 if t["done"] else (t.get("progress") or 0) for t in ts) / len(ts)) if ts else None,
+                     "status": "none" if not ts else "done" if done == len(ts) else "overdue" if over else "partial"})
+        per = {}
+        for t in ts:
+            per[t["assignee_id"]] = per.get(t["assignee_id"], 0) + 1
+        warnings += [{"date": k, "user_id": uid, "count": n} for uid, n in per.items() if n >= 4]
+        d += timedelta(days=1)
+    employees = []
+    for uid, ts in by_user.items():
+        n = sum(1 for t in ts if t["day"] == sel)
+        employees.append({"user_id": uid, **agg(ts), "day_deadlines": n, "load": "santai" if n <= 1 else "normal" if n <= 3 else "padat" if n == 4 else "overload"})
+    employees.sort(key=lambda e: (-e["total"], e["user_id"]))
+
+    def slim(t):
+        return {k: t.get(k) for k in ("id", "number_str", "title", "assignee_id", "state", "done", "progress", "day")}
+    tstart = datetime(y - (m <= 5), (m - 6) % 12 + 1, 1, tzinfo=WIB)
+    hist = await db.tasks.find({**base, "deadline": {"$gte": _utc(tstart), "$lt": _utc(end)}}, fields).to_list(20000)
+    months = {}
+    for t in hist:
+        t.update(classify(t, dk, today))
+        months.setdefault(t["day"][:7], []).append(t)
+    trend, cur = [], tstart
+    while cur < end:
+        k = cur.strftime("%Y-%m")
+        a = agg(months.get(k, []))
+        trend.append({"month": k, "on_time_rate": a["on_time_rate"], "due": a["due"], "on_time": a["on_time"]})
+        cur = datetime(cur.year + (cur.month == 12), cur.month % 12 + 1, 1, tzinfo=WIB)
+    return {"month": f"{y:04d}-{m:02d}", "today": today.isoformat(), "day": sel, "kpi_target": ws.get("kpi_target") or 90, "min_data": MIN_KPI_DATA,
+            "scope": "user" if (user_id or not is_manager(u)) else "all", "summary": agg(tasks), "employees": employees, "days": days,
+            "warnings": sorted(warnings, key=lambda w: (-w["count"], w["date"]))[:10],
+            "day_tasks": [slim(t) for t in sorted(by_day.get(sel, []), key=lambda t: t["assignee_id"])],
+            "user_tasks": [slim(t) for t in sorted(tasks, key=lambda t: t["day"] or "9")] if user_id or not is_manager(u) else [], "trend": trend}
 
 
 # ---------- Labels ----------

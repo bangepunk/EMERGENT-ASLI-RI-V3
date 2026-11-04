@@ -7,7 +7,7 @@ from core import db, now_iso, new_id, get_user, is_admin, require_admin, notify,
 router = APIRouter(prefix="/api")
 P = {"_id": 0}
 PREF_KEYS = {"theme_mode", "theme", "background", "dashboard", "notifications", "task_columns", "task_card_style", "push_enabled", "task_view", "task_sheet"}
-WS_KEYS = {"name", "tagline", "description", "logo_file_id", "theme", "allowed_domains", "auto_join_domain", "require_approval", "org_levels", "divisions", "item_types", "login_image_file_id"}
+WS_KEYS = {"name", "tagline", "description", "logo_file_id", "theme", "allowed_domains", "auto_join_domain", "require_approval", "org_levels", "divisions", "item_types", "login_image_file_id", "kpi_target"}
 MAX_SIZE = 15 * 1024 * 1024
 ALLOWED = {"image/png", "image/jpeg", "image/gif", "image/webp", "application/pdf", "text/plain", "text/csv",
            "application/msword", "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
@@ -63,6 +63,11 @@ async def update_ws(body: dict = Body(...), u=Depends(get_user)):
                 seen.add(nm.lower())
                 items.append({"name": nm, "color": str(i.get("color") or "#94A3B8")[:9]})
         upd["item_types"] = items
+    if "kpi_target" in upd:
+        try:
+            upd["kpi_target"] = max(1, min(100, int(upd["kpi_target"])))
+        except (TypeError, ValueError):
+            raise HTTPException(400, "Target KPI harus angka 1-100")
     if upd.get("login_image_file_id") and not await db.files.find_one({"id": upd["login_image_file_id"], "workspace_id": u["workspace_id"], "content_type": {"$regex": "^image/"}}):
         raise HTTPException(400, "Gambar login harus berupa file gambar")
     if "brand_name" in body:
