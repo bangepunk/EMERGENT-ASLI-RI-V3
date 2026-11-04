@@ -26,8 +26,8 @@ export function TaskWorkspace({ projectId, compactHeader }) {
   const [tasks, setTasks] = useState(null);
   const [projects, setProjects] = useState({});
   const [saved, setSaved] = useState(params.get("view") || "all");
-  const [view, setView] = useState(prefs.task_view || "board");
-  const [f, setF] = useState({ q: "", label: params.get("label") || "", assignee_id: "", priority: "", department: "" });
+  const [view, setView] = useState(params.get("kanban") ? "board" : prefs.task_view || "board");
+  const [f, setF] = useState({ q: "", label: params.get("label") || "", assignee_id: params.get("assignee") || "", priority: "", department: "" });
   const [groupBy, setGroupBy] = useState("none");
   const [selected, setSelected] = useState([]);
   const [create, setCreate] = useState(null);

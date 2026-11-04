@@ -95,7 +95,7 @@ export default function Dashboard() {
     const today = open.filter((t) => t.assignee_id === me.user_id && t.deadline && new Date(t.deadline).toDateString() === new Date().toDateString());
     const todayList = today.length ? today : open.filter((t) => t.assignee_id === me.user_id).slice(0, 5);
     switch (k) {
-      case "stats": return <Widget id={k} wide><MonthlyStats /></Widget>;
+      case "stats": return <MonthlyStats key={k} />;
       case "today": return <Widget id={k}>{todayList.length ? todayList.map((t) => <TaskRow key={t.id} t={t} />) : <p className="text-sm text-sub">No tasks for today. Enjoy the calm.</p>}</Widget>;
       case "deadlines": { const up = open.filter((t) => t.deadline).sort((a, b) => a.deadline.localeCompare(b.deadline)).slice(0, 6); return <Widget id={k}>{up.length ? up.map((t) => <TaskRow key={t.id} t={t} />) : <p className="text-sm text-sub">No upcoming deadlines.</p>}</Widget>; }
       case "projects": return <Widget id={k}>{data.projects.length ? data.projects.map((p) => (

@@ -2,7 +2,7 @@ import csv
 import io
 import json
 import re
-from datetime import datetime, timezone, timedelta
+from datetime import date, datetime, timezone, timedelta
 from fastapi import APIRouter, HTTPException, Depends, Body, Request, Query
 from fastapi.responses import Response
 from core import db, now_iso, new_id, get_user, is_admin, is_manager, require_manager, notify, manager, audit
@@ -561,6 +561,58 @@ async def monthly_stats(month: str = Query(None), user_id: str = Query(None), u=
               "submit_date": 1, "deadline": 1, "completed_at": 1, "created_at": 1}
     tasks = await db.tasks.find(q, fields).sort("created_at", -1).to_list(5000)
     return {"month": f"{y:04d}-{m:02d}", "scope": "all" if is_manager(u) and not user_id else "user", "tasks": tasks}
+
+
+@router.get("/stats/team")
+async def team_stats(anchor: str = Query(None), period: str = Query("7d", alias="range"), u=Depends(get_user)):
+    today = datetime.now(WIB).date()
+    try:
+        a = date.fromisoformat(anchor) if anchor else today
+    except ValueError:
+        raise HTTPException(400, "Invalid date")
+    week0 = a - timedelta(days=a.weekday())
+    four = period == "4w"
+    if four:
+        buckets = [(week0 - timedelta(weeks=3 - i), week0 - timedelta(weeks=3 - i) + timedelta(days=7)) for i in range(4)]
+    else:
+        buckets = [(week0 + timedelta(days=i), week0 + timedelta(days=i + 1)) for i in range(7)]
+
+    def at(d):
+        return _utc(datetime(d.year, d.month, d.day, tzinfo=WIB))
+    ws = await db.workspaces.find_one({"id": u["workspace_id"]}, {"task_statuses": 1})
+    dk = {s["key"] for s in ws.get("task_statuses", []) if s.get("is_done")}
+    base = {"workspace_id": u["workspace_id"], "archived": {"$ne": True}, "assignee_id": {"$ne": None}}
+    if not is_manager(u):
+        base["assignee_id"] = u["user_id"]
+    await scoped(u, base)
+    fields = {"_id": 0, "id": 1, "title": 1, "status": 1, "assignee_id": 1, "deadline": 1, "completed_at": 1}
+    rng = {"$gte": at(buckets[0][0]), "$lt": at(buckets[-1][1])}
+    period = await db.tasks.find({**base, "$or": [{"deadline": rng}, {"completed_at": rng}]}, fields).to_list(20000)
+    for t in period:
+        t.update(classify(t, dk, today))
+        c = _wib(t.get("completed_at"))
+        t["cday"] = c.date() if c and t["done"] else None
+        t["dday"] = date.fromisoformat(t["day"]) if t["day"] else None
+    series = [{"start": s0.isoformat(), "done": sum(1 for t in period if t["cday"] and s0 <= t["cday"] < s1),
+               "overdue": sum(1 for t in period if t["dday"] and s0 <= t["dday"] < s1 and t["state"] in ("late", "overdue"))} for s0, s1 in buckets]
+    p0, p1 = buckets[0][0], buckets[-1][1]
+    inp = [t for t in period if t["dday"] and p0 <= t["dday"] < p1]
+    due = sum(1 for t in inp if t["due"])
+    on = sum(1 for t in inp if t["state"] == "on_time")
+    active = await db.tasks.find({**base, "status": {"$nin": list(dk)}}, fields).sort("deadline", 1).to_list(20000)
+    uq = {"workspace_id": u["workspace_id"], "status": "active", **({} if is_manager(u) else {"user_id": u["user_id"]})}
+    people = []
+    async for x in db.users.find(uq, {"_id": 0, "user_id": 1}):
+        mine = [t for t in active if t["assignee_id"] == x["user_id"]]
+        n = sum(1 for t in period if t["assignee_id"] == x["user_id"] and t["dday"] == a)
+        people.append({"user_id": x["user_id"], "active": len(mine), "share": round(100 * len(mine) / len(active)) if active else 0,
+                       "tasks": [{"id": t["id"], "title": t["title"]} for t in mine[:3]], "more": max(0, len(mine) - 3), "day_deadlines": n,
+                       "status": "optimal" if n <= 1 else "stabil" if n <= 3 else "pressure"})
+    people.sort(key=lambda p: -p["active"])
+    return {"anchor": a.isoformat(), "today": today.isoformat(), "range": "4w" if four else "7d",
+            "week": [(week0 + timedelta(days=i)).isoformat() for i in range(7)], "series": series,
+            "summary": {"done": sum(s["done"] for s in series), "overdue": sum(s["overdue"] for s in series), "due": due, "on_time": on,
+                        "on_time_rate": round(100 * on / due) if due else None}, "people": people}
 
 
 @router.get("/stats/performance")
